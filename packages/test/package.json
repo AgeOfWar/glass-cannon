@@ -1,0 +1,21 @@
+{
+  "name": "benchmark",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.ts"
+  },
+  "dependencies": {
+    "@glass-cannon/server-node": "workspace:*",
+    "@glass-cannon/middleware": "workspace:*",
+    "@glass-cannon/router": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "bun --cwd=../router run build && bun run ./src/index.ts"
+  }
+}

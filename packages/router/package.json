@@ -1,0 +1,31 @@
+{
+  "name": "@glass-cannon/router",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./middleware": {
+      "import": "./dist/middleware/index.js",
+      "types": "./dist/middleware/index.d.ts"
+    },
+    "./middleware/contentType": {
+      "import": "./dist/middleware/contentType.js",
+      "types": "./dist/middleware/contentType.d.ts"
+    }
+  },
+  "dependencies": {
+    "@glass-cannon/server": "workspace:*",
+    "@glass-cannon/middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias"
+  }
+}
