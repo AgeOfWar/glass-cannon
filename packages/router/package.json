@@ -1,6 +1,7 @@
 {
   "name": "@glass-cannon/router",
   "type": "module",
+  "version": "0.0.3",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -15,9 +16,9 @@
       "types": "./dist/middleware/contentType.d.ts"
     }
   },
+  "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/server": "workspace:*",
-    "@glass-cannon/middleware": "workspace:*"
+    "@glass-cannon/server": "^0.0.1"
   },
   "devDependencies": {
     "@types/bun": "latest"

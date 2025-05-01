@@ -1,14 +1,16 @@
 {
   "name": "@glass-cannon/server-node",
   "type": "module",
+  "version": "0.0.3",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
+  "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/server": "workspace:*"
+    "@glass-cannon/server": "workspace:^0.0.1"
   },
   "devDependencies": {
     "@types/bun": "latest"
