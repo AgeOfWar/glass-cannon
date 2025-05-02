@@ -7,8 +7,3 @@ export interface Response {
   headers?: Headers;
   body?: ResponseBody;
 }
-
-export interface ResponseHeader {
-  status: number;
-  headers: Headers;
-}
