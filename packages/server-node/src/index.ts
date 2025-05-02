@@ -10,6 +10,8 @@ import type {
 import { Writable, Readable } from 'node:stream';
 import type { ReadableStream, WritableStream } from 'node:stream/web';
 
+export * from '@glass-cannon/server';
+
 export class NodeServer implements Server {
   constructor(
     private handler: Handler,
