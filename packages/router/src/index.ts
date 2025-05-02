@@ -2,6 +2,10 @@
 import type { Handler, Request, Response } from '@glass-cannon/server';
 import { pipe, type Middleware } from './middleware';
 
+const ALL_METHODS = '*';
+
+type StringWithSuggestions<T> = T | (string & {});
+
 export type RouteHandler<Context> = (
   request: RouteContext & Context
 ) => Promise<Response> | Response;
@@ -10,9 +14,8 @@ export type RouteContext = Request & {
   params: Record<string, string>;
   route: Route<any>;
 };
-
 export interface Route<Context> {
-  method?: string;
+  method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
   handler: RouteHandler<Context>;
 }
@@ -49,8 +52,9 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   private readonly fallback: Handler;
   private readonly middleware: Middleware<Context>;
 
-  private routes: RouteWithMetadata<Context>[] = [];
-  private regex: RegExp | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  private routes: Record<string, [RouteWithMetadata<Context>[], RegExp | undefined]> =
+    Object.create(null);
 
   constructor(options?: RouterOptions<Context>) {
     this.fallback = options?.fallback ?? (() => ({ status: 404 }));
@@ -75,7 +79,10 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
   route(route: RouteOptions<Context>): void {
     const metadata = this.computeMetadata(route);
-    binaryInsert(this.routes, metadata, (route) => route.score);
+    const method = route.method ?? ALL_METHODS;
+    this.routes[method] ??= [[], undefined];
+    binaryInsert(this.routes[method][0], metadata, (route) => route.score);
+    this.routes[method][1] = undefined;
   }
 
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext> {
@@ -98,13 +105,31 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   private matchingRouteWithMetadata(
     request: Pick<Request, 'method' | 'path'>
   ): RouteWithMetadata<Context> | undefined {
-    this.regex ??= this.compileRegex();
-    const match = this.regex.exec(request.path);
+    const routes = this.routes[request.method];
+    if (!routes) return this.matchingGeneralRouteWithMetadata(request);
+
+    routes[1] ??= this.compileRegex(request.method);
+    const match = routes[1].exec(request.path);
+
+    if (!match) return this.matchingGeneralRouteWithMetadata(request);
+
+    const matchIndex = match.findLastIndex(Boolean) - 1;
+    return routes[0][matchIndex];
+  }
+
+  private matchingGeneralRouteWithMetadata(
+    request: Pick<Request, 'method' | 'path'>
+  ): RouteWithMetadata<Context> | undefined {
+    const routes = this.routes[ALL_METHODS];
+    if (!routes) return;
+
+    routes[1] ??= this.compileRegex(request.method);
+    const match = routes[1].exec(request.path);
 
     if (!match) return;
 
     const matchIndex = match.findLastIndex(Boolean) - 1;
-    return this.routes[matchIndex];
+    return routes[0][matchIndex];
   }
 
   private computeMetadata(route: Route<Context>): RouteWithMetadata<Context> {
@@ -151,9 +176,8 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     );
   }
 
-  private compileRegex(): RegExp {
-    if (this.routes.length === 0) return new RegExp('$^');
-    const regex = this.routes.map((route) => route.regex).join('|');
+  private compileRegex(method: string): RegExp {
+    const regex = this.routes[method]![0].map((route) => route.regex).join('|');
     return new RegExp(regex);
   }
 }
