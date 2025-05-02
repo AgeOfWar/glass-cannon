@@ -15,7 +15,7 @@ export type RouteContext = Request & {
   route: Route<any>;
 };
 export interface Route<Context> {
-  method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
+  method?: string;
   path: string;
   handler: RouteHandler<Context>;
 }
@@ -31,7 +31,7 @@ export interface RouterOptions<Context = unknown> {
 }
 
 export interface RouteOptions<Context> {
-  method?: string;
+  method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
   handler: RouteHandler<Context>;
 }
