@@ -7,9 +7,9 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./middleware": {
-      "import": "./dist/middleware/index.js",
-      "types": "./dist/middleware/index.d.ts"
+    "./contentType": {
+      "import": "./dist/contentType/index.js",
+      "types": "./dist/contentType/index.d.ts"
     }
   },
   "files": ["dist"],

@@ -10,6 +10,7 @@ export function writeText(text: string, encoding: BufferEncoding = 'utf-8'): Res
 }
 
 export function writeJson(json: unknown, encoding: BufferEncoding = 'utf-8'): ResponseBody {
+  if (json === undefined) return () => {};
   return writeText(JSON.stringify(json), encoding);
 }
 
