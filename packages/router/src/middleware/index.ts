@@ -22,18 +22,14 @@ export type PipeMiddlewares<Middlewares extends Middleware[]> = Middlewares exte
 export function pipe<Middlewares extends Middleware[]>(
   ...middlewares: Middlewares
 ): PipeMiddlewares<Middlewares> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((handler: any, request: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return middlewares.reduceRight((acc, middleware) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      return middleware(acc, request);
-    }, handler);
-  }) as unknown as PipeMiddlewares<Middlewares>;
+  return ((handler, request) => {
+    return middlewares.reduceRight(
+      (next, middleware) => (req) => middleware(next, req),
+      handler
+    )(request);
+  }) as PipeMiddlewares<Middlewares>;
 }
 
-export const authenticated: Middleware<{ accessToken: string }> = async (handler, request) => {
-  const accessToken = request.headers.get('Authorization')?.split(' ')[1];
-  if (!accessToken) throw new Error('Unauthorized');
-  return await handler({ ...request, accessToken });
+export const noop: Middleware = (handler, request) => {
+  return handler(request);
 };

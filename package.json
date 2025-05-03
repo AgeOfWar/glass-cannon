@@ -18,7 +18,6 @@
     "lint": "eslint ."
   },
   "workspaces": [
-    "packages/*",
-    "benchmark"
+    "packages/*"
   ]
 }

@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "@glass-cannon/server-node": "workspace:*",
-    "@glass-cannon/middleware": "workspace:*",
     "@glass-cannon/router": "workspace:*"
   },
   "devDependencies": {

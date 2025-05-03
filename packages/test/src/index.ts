@@ -1,23 +1,28 @@
 import { NodeServer } from '@glass-cannon/server-node';
 import { Router } from '@glass-cannon/router';
-import { authenticated, pipe } from '@glass-cannon/router/middleware';
-import contentType from '@glass-cannon/router/middleware/contentType';
+import { pipe, type Middleware } from '@glass-cannon/router/middleware';
+import * as contentType from '@glass-cannon/router/middleware/contentType';
 
 //const middlewares = pipe(contentType.json());
+
+export const authenticated: Middleware<{ accessToken: string }> = async (handler, request) => {
+  const accessToken = request.headers.get('Authorization')?.split(' ')[1] ?? '';
+  return await handler({ ...request, accessToken });
+};
 
 const router = new Router();
 
 const group = router.group({ middleware: authenticated });
 
 const group2 = group.group({
-  prefix: '/v1',
   middleware: pipe(contentType.json(), contentType.text()),
 });
 
 group2.route({
+  method: 'GET',
   path: '/hello',
   handler: ({ params }) => {
-    console.log('/hello', params);
+    console.log('GET');
     return { status: 200 };
   },
 });

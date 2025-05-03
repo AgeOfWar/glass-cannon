@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Handler, Request, Response } from '@glass-cannon/server';
-import { pipe, type Middleware } from './middleware';
+import { noop, pipe, type Middleware } from './middleware';
 
 const ALL_METHODS = '*';
 
@@ -58,7 +58,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
   constructor(options?: RouterOptions<Context>) {
     this.fallback = options?.fallback ?? (() => ({ status: 404 }));
-    this.middleware = options?.middleware ?? ((x): any => x);
+    this.middleware = options?.middleware ?? (noop as Middleware<Context>);
   }
 
   matchingRoute(request: Pick<Request, 'method' | 'path'>): Route<Context> | undefined {
@@ -79,7 +79,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
   route(route: RouteOptions<Context>): void {
     const metadata = this.computeMetadata(route);
-    const method = route.method ?? ALL_METHODS;
+    const method = route.method?.toUpperCase() ?? ALL_METHODS;
     this.routes[method] ??= [[], undefined];
     binaryInsert(this.routes[method][0], metadata, (route) => route.score);
     this.routes[method][1] = undefined;
@@ -89,7 +89,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     return {
       route: (route) => {
         const path = options.prefix ? `${options.prefix}${route.path}` : route.path;
-        const handler: RouteHandler<Context> = async (context) =>
+        const handler: RouteHandler<Context> = (context) =>
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           options.middleware(route.handler as any, context);
         this.route({ ...route, path, handler });
@@ -123,7 +123,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     const routes = this.routes[ALL_METHODS];
     if (!routes) return;
 
-    routes[1] ??= this.compileRegex(request.method);
+    routes[1] ??= this.compileRegex(ALL_METHODS);
     const match = routes[1].exec(request.path);
 
     if (!match) return;

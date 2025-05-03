@@ -10,7 +10,7 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/server": "workspace:^0.0.1"
+    "@glass-cannon/server": "workspace:0.0.4"
   },
   "devDependencies": {
     "@types/bun": "latest"
