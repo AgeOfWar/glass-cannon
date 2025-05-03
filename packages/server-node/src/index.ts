@@ -93,7 +93,7 @@ export class NodeServer implements Server {
   }
 }
 
-function defaultErrorHandler(error: unknown): Response {
+export function defaultErrorHandler(error: unknown): Response {
   console.error(error);
   return {
     status: 500,

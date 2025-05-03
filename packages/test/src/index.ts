@@ -1,4 +1,4 @@
-import { NodeServer } from '@glass-cannon/server-node';
+import { BunServer } from '@glass-cannon/server-bun';
 import { Router } from '@glass-cannon/router';
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
 import * as contentType from '@glass-cannon/router/middleware/contentType';
@@ -10,7 +10,12 @@ export const authenticated: Middleware<{ accessToken: string }> = async (handler
   return await handler({ ...request, accessToken });
 };
 
-const router = new Router();
+const router = new Router({
+  fallback: (req) => {
+    console.log(req);
+    return { status: 404 };
+  },
+});
 
 const group = router.group({ middleware: authenticated });
 
@@ -22,7 +27,6 @@ group2.route({
   method: 'GET',
   path: '/hello',
   handler: ({ params }) => {
-    console.log('GET');
     return { status: 200 };
   },
 });
@@ -30,11 +34,10 @@ group2.route({
 router.route({
   path: '/hello/:name',
   handler: ({ params }) => {
-    console.log(params);
     return { status: 200 };
   },
 });
 
-const server = new NodeServer(router.handle);
+const server = new BunServer(router.handle);
 const runningServer = await server.listen({ host: '127.0.0.1', port: 3000 });
 console.log(`Server is running on ${runningServer.url}`);
