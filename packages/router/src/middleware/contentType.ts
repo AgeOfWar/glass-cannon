@@ -15,7 +15,7 @@ export function text(options?: ContentTypeOptions): Middleware<{ text: string }>
     const contentType = context.headers.get('Content-Type');
     if (!contentType) {
       if (allowNoContent) {
-        return await handler({ ...context, text: '' });
+        return await handler({ text: '' });
       } else {
         return await onInvalidContentType(context);
       }
@@ -25,7 +25,7 @@ export function text(options?: ContentTypeOptions): Middleware<{ text: string }>
     const charsetMatch = /charset=([^;]*)/i.exec(contentType);
     const encoding = (charsetMatch?.[1]?.trim().toLowerCase() ?? 'utf-8') as BufferEncoding;
     const text = await readText(context.body, encoding);
-    return await handler({ ...context, text });
+    return await handler({ text });
   };
 }
 
@@ -37,7 +37,7 @@ export function json(options?: ContentTypeOptions): Middleware<{ json: unknown }
     const contentType = context.headers.get('Content-Type');
     if (!contentType) {
       if (allowNoContent) {
-        return await handler({ ...context, json: undefined });
+        return await handler({ json: undefined });
       } else {
         return await onInvalidContentType(context);
       }
@@ -45,6 +45,6 @@ export function json(options?: ContentTypeOptions): Middleware<{ json: unknown }
 
     if (!contentType.startsWith('application/json')) return await onInvalidContentType(context);
     const json = await readJson(context.body, 'utf-8');
-    return await handler({ ...context, json });
+    return await handler({ json });
   };
 }
