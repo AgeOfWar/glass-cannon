@@ -31,10 +31,10 @@ export interface RouterOptions<Context = unknown> {
   middleware?: Middleware<Context>;
 }
 
-export interface RouteOptions<Context, NewContext> {
+export interface RouteOptions<Context, NewContext = undefined> {
   method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
-  middleware: Middleware<NewContext>;
+  middleware?: Middleware<NewContext>;
   handler: RouteHandler<Context & NewContext>;
 }
 
@@ -81,7 +81,9 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   };
 
   route<NewContext>(route: RouteOptions<Context, NewContext>): void {
-    const handler: RouteHandler<Context> = applyMiddleware(route.middleware, route.handler);
+    const handler: RouteHandler<Context> = route.middleware
+      ? applyMiddleware(route.middleware, route.handler)
+      : (route.handler as RouteHandler<Context>);
     const metadata = this.computeMetadata({ method: route.method, path: route.path, handler });
     const method = route.method?.toUpperCase() ?? ALL_METHODS;
     this.routes[method] ??= [[], undefined];
@@ -91,9 +93,11 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext> {
     return {
-      route: (route) => {
+      route: <NewerContext>(route: RouteOptions<Context & NewContext, NewerContext>) => {
         const path = options.prefix ? `${options.prefix}${route.path}` : route.path;
-        const middleware = pipe(options.middleware, route.middleware);
+        const middleware: Middleware<NewContext & NewerContext> = route.middleware
+          ? pipe(options.middleware, route.middleware)
+          : (options.middleware as Middleware<NewContext & NewerContext>);
         this.route({ ...route, path, middleware });
       },
       group: (group) => {
