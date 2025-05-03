@@ -61,18 +61,19 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     this.middleware = options?.middleware ?? (noop as Middleware<Context>);
   }
 
-  matchingRoute(request: Pick<Request, 'method' | 'path'>): Route<Context> | undefined {
-    return this.matchingRouteWithMetadata(request)?.route;
+  matchingRoute(method: string, path: string): Route<Context> | undefined {
+    return this.matchingRouteWithMetadata(method, path)?.route;
   }
 
   handle: Handler = async (request) => {
-    const routeWithMetadata = this.matchingRouteWithMetadata(request);
+    const path = request.url.pathname;
+    const routeWithMetadata = this.matchingRouteWithMetadata(request.method, path);
 
     if (!routeWithMetadata) return await this.fallback(request);
 
     const { route, capturingRegex } = routeWithMetadata;
 
-    const params = { ...capturingRegex.exec(request.path)!.groups };
+    const params = { ...capturingRegex.exec(path)!.groups };
     const context = { ...request, params, route };
     return await this.middleware(route.handler, context);
   };
@@ -103,28 +104,27 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   }
 
   private matchingRouteWithMetadata(
-    request: Pick<Request, 'method' | 'path'>
+    method: string,
+    path: string
   ): RouteWithMetadata<Context> | undefined {
-    const routes = this.routes[request.method];
-    if (!routes) return this.matchingGeneralRouteWithMetadata(request);
+    const routes = this.routes[method];
+    if (!routes) return this.matchingGeneralRouteWithMetadata(path);
 
-    routes[1] ??= this.compileRegex(request.method);
-    const match = routes[1].exec(request.path);
+    routes[1] ??= this.compileRegex(method);
+    const match = routes[1].exec(path);
 
-    if (!match) return this.matchingGeneralRouteWithMetadata(request);
+    if (!match) return this.matchingGeneralRouteWithMetadata(path);
 
     const matchIndex = match.findLastIndex(Boolean) - 1;
     return routes[0][matchIndex];
   }
 
-  private matchingGeneralRouteWithMetadata(
-    request: Pick<Request, 'method' | 'path'>
-  ): RouteWithMetadata<Context> | undefined {
+  private matchingGeneralRouteWithMetadata(path: string): RouteWithMetadata<Context> | undefined {
     const routes = this.routes[ALL_METHODS];
     if (!routes) return;
 
     routes[1] ??= this.compileRegex(ALL_METHODS);
-    const match = routes[1].exec(request.path);
+    const match = routes[1].exec(path);
 
     if (!match) return;
 

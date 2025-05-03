@@ -10,12 +10,7 @@ export const authenticated: Middleware<{ accessToken: string }> = async (handler
   return await handler({ ...request, accessToken });
 };
 
-const router = new Router({
-  fallback: (req) => {
-    console.log(req);
-    return { status: 404 };
-  },
-});
+const router = new Router();
 
 const group = router.group({ middleware: authenticated });
 

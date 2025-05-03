@@ -45,7 +45,7 @@ export class BunServer implements Server {
 
   private toRequest(request: globalThis.Request): Request {
     return {
-      path: new URL(request.url).pathname,
+      url: new URL(request.url),
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
       body: (request.body as ReadableStream<Uint8Array> | null) ?? this.emptyReadableStream(),

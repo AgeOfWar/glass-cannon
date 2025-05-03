@@ -31,7 +31,7 @@ export class NodeServer implements Server {
       const server = http.createServer({ joinDuplicateHeaders: true }, (request, response) => {
         void (async () => {
           try {
-            const req = this.toRequest(request);
+            const req = this.toRequest(request, host);
             const res = await this.handler(req);
             await this.fromResponse(res, response);
           } catch (error) {
@@ -70,12 +70,12 @@ export class NodeServer implements Server {
     });
   }
 
-  private toRequest(request: http.IncomingMessage): Request {
+  private toRequest(request: http.IncomingMessage, host: string): Request {
     if (request.url === undefined || request.method === undefined) {
       throw new Error('Request URL is missing');
     }
     return {
-      path: request.url,
+      url: new URL(`http://${host}${request.url}`),
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
       body: Readable.toWeb(request) as ReadableStream<Uint8Array>,
