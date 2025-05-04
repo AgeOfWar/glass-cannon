@@ -1,14 +1,14 @@
-import type {
-  GroupOptions,
-  RouteContext,
-  RouteHandler,
-  RouteOptions,
-  RouterGroup,
+import {
+  type GroupOptions,
+  type RouteContext,
+  type RouteHandler,
+  type RouteOptions,
+  type RouterGroup,
 } from '@glass-cannon/router';
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
 import { json } from '@glass-cannon/server';
 import type { Response as RawResponse } from '@glass-cannon/server';
-import type { StaticDecode, TSchema } from '@sinclair/typebox';
+import { type StaticDecode, type TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
 
 export interface RouteSchema {
@@ -51,8 +51,8 @@ type StringWithSuggestions<T> = T | (string & {});
 export interface ValidatedRouteOptions<Context, NewContext, Schema extends RouteSchema> {
   method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
-  middleware: Middleware<NewContext>;
   schema: Schema;
+  middleware?: Middleware<NewContext>;
   handler: ValidatedRouteHandler<Context, NewContext, Schema>;
   onInvalidRequest?: RouteHandler<{ json: unknown } & ValidationErrorContext>;
   serializeResponse?: (response: ValidatedResponse<Schema>) => RawResponse | Promise<RawResponse>;
@@ -88,20 +88,20 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
     this.serializeResponse = options?.serializeResponse ?? json;
   }
 
-  route<NewContext, Schema extends RouteSchema = RouteSchema>(
-    options: RouteOptions<Context, NewContext> | ValidatedRouteOptions<Context, NewContext, Schema>
+  validated<NewContext, Schema extends RouteSchema = RouteSchema>(
+    options: ValidatedRouteOptions<Context, NewContext, Schema>
   ): void {
-    if ('schema' in options) {
-      this.routerGroup.route(
-        validated({
-          ...options,
-          onInvalidRequest: options.onInvalidRequest ?? this.onInvalidRequest,
-          serializeResponse: options.serializeResponse ?? this.serializeResponse,
-        })
-      );
-    } else {
-      this.routerGroup.route(options);
-    }
+    this.routerGroup.route(
+      validated({
+        ...options,
+        onInvalidRequest: options.onInvalidRequest ?? this.onInvalidRequest,
+        serializeResponse: options.serializeResponse ?? this.serializeResponse,
+      })
+    );
+  }
+
+  route<NewContext>(options: RouteOptions<Context, NewContext>): void {
+    this.routerGroup.route(options);
   }
 
   group<NewContext>(options: GroupOptions<NewContext>): TypeBoxGroup<Context & NewContext> {
@@ -118,7 +118,9 @@ export function validated<Context, NewContext, Schema extends RouteSchema>(
   return {
     method: options.method,
     path: options.path,
-    middleware: pipe(validationMiddleware, options.middleware),
+    middleware: options.middleware
+      ? pipe(validationMiddleware, options.middleware)
+      : (validationMiddleware as Middleware<ValidatedContext<Schema> & NewContext>),
     handler: async (context) => {
       const response = await options.handler(context);
       return await serializeResponse(response);
