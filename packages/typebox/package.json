@@ -10,7 +10,7 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/router": "0.0.11",
+    "@glass-cannon/router": "0.0.14",
     "@glass-cannon/server": "0.0.10",
     "@sinclair/typebox": "^0.34.33"
   },
