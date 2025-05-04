@@ -1,6 +1,8 @@
 import type { Response } from '@glass-cannon/server';
 import type { RouteContext, RouteHandler } from '..';
 
+export * from './contentType';
+
 export type Middleware<T = unknown> = (
   next: (context: T) => Promise<Response> | Response,
   request: RouteContext

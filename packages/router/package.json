@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/router",
   "type": "module",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -10,10 +10,6 @@
     "./middleware": {
       "import": "./dist/middleware/index.js",
       "types": "./dist/middleware/index.d.ts"
-    },
-    "./middleware/contentType": {
-      "import": "./dist/middleware/contentType.js",
-      "types": "./dist/middleware/contentType.d.ts"
     }
   },
   "files": ["dist"],

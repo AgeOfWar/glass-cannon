@@ -7,7 +7,7 @@ export interface ContentTypeOptions {
   onInvalidContentType?: (context: RouteContext) => Promise<Response> | Response;
 }
 
-export function text(options?: ContentTypeOptions): Middleware<{ text: string }> {
+export function textBody(options?: ContentTypeOptions): Middleware<{ text: string }> {
   const allowNoContent = options?.allowNoConent ?? true;
   const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
 
@@ -29,7 +29,7 @@ export function text(options?: ContentTypeOptions): Middleware<{ text: string }>
   };
 }
 
-export function json(options?: ContentTypeOptions): Middleware<{ json: unknown }> {
+export function jsonBody(options?: ContentTypeOptions): Middleware<{ json: unknown }> {
   const allowNoContent = options?.allowNoConent ?? true;
   const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
 
