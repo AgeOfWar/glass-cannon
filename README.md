@@ -32,7 +32,7 @@ npm install @glass-cannon/server-node @glass-cannon/router
 Bun:
 
 ```bash
-npm install @glass-cannon/server-bun @glass-cannon/router
+bun install @glass-cannon/server-bun @glass-cannon/router
 ```
 
 ## Example
