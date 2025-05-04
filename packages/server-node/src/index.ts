@@ -86,11 +86,24 @@ export class NodeServer implements Server {
     response: Response,
     serverResponse: http.ServerResponse
   ): Promise<void> {
-    serverResponse.writeHead(response.status, undefined, response.headers?.toJSON());
+    const headers = response.headers && headersToObject(response.headers);
+    serverResponse.writeHead(response.status, undefined, headers);
     const writable = Writable.toWeb(serverResponse) as WritableStream<Uint8Array>;
     await response.body?.(writable);
     serverResponse.end();
   }
+}
+
+function headersToObject(headers: Headers): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  headers.forEach((value, key) => {
+    if (result[key]) {
+      result[key].push(value);
+    } else {
+      result[key] = [value];
+    }
+  });
+  return result;
 }
 
 export function defaultErrorHandler(error: unknown): Response {
