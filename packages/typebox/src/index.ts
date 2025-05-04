@@ -6,7 +6,7 @@ import type {
   RouterGroup,
 } from '@glass-cannon/router';
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
-import { json } from '@glass-cannon/server/contentType';
+import { json } from '@glass-cannon/server';
 import type { Response as RawResponse } from '@glass-cannon/server';
 import type { StaticDecode, TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
