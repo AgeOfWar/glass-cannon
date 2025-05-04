@@ -8,7 +8,7 @@ import {
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
 import { json } from '@glass-cannon/server';
 import type { Response as RawResponse } from '@glass-cannon/server';
-import { Type, type StaticDecode, type TSchema } from '@sinclair/typebox';
+import { type StaticDecode, type TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
 
 export interface RouteSchema {
