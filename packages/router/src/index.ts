@@ -77,7 +77,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
     const params = { ...capturingRegex.exec(path)!.groups };
     const context = { ...request, params, route };
-    return await this.middleware(route.handler, context);
+    return await applyMiddleware(this.middleware, route.handler)(context);
   };
 
   route<NewContext>(route: RouteOptions<Context, NewContext>): void {
