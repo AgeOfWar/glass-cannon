@@ -1,5 +1,5 @@
-import type { Response } from '../response';
-import { writeJson, writeText } from '../stream';
+import type { Response } from './response';
+import { writeJson, writeText } from './stream';
 
 export function json({
   status,

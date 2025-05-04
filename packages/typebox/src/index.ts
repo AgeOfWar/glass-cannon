@@ -67,7 +67,14 @@ export interface TypeBoxGroupOptions {
   onInvalidRequest?: RouteHandler<{ json: unknown } & ValidationErrorContext>;
 }
 
-export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
+export function typebox<Context>(
+  routerGroup: RouterGroup<Context>,
+  options?: TypeBoxGroupOptions
+): TypeBoxGroup<Context> {
+  return new TypeBoxGroup(routerGroup, options);
+}
+
+export class TypeBoxGroup<Context> implements RouterGroup<Context> {
   private readonly onInvalidRequest: RouteHandler<{ json: unknown } & ValidationErrorContext>;
   private readonly serializeResponse: (
     response: ValidatedResponse

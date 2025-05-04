@@ -1,15 +1,11 @@
 {
   "name": "@glass-cannon/server",
   "type": "module",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./contentType": {
-      "import": "./dist/contentType/index.js",
-      "types": "./dist/contentType/index.d.ts"
     }
   },
   "files": ["dist"],
