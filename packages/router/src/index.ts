@@ -40,7 +40,7 @@ export interface RouteOptions<Context, NewContext = undefined> {
 
 export interface GroupOptions<Context> {
   prefix?: string;
-  middleware: Middleware<Context>;
+  middleware?: Middleware<Context>;
 }
 
 interface RouteWithMetadata<Context> {
@@ -95,14 +95,18 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     return {
       route: <NewerContext>(route: RouteOptions<Context & NewContext, NewerContext>) => {
         const path = options.prefix ? `${options.prefix}${route.path}` : route.path;
-        const middleware: Middleware<NewContext & NewerContext> = route.middleware
-          ? pipe(options.middleware, route.middleware)
-          : (options.middleware as Middleware<NewContext & NewerContext>);
+        const middlewares: Middleware<NewContext | NewerContext>[] = [];
+        if (options.middleware) middlewares.push(options.middleware);
+        if (route.middleware) middlewares.push(route.middleware);
+        const middleware = pipe(...middlewares) as Middleware<NewContext & NewerContext>;
         this.route({ ...route, path, middleware });
       },
-      group: (group) => {
+      group: <NewerContext>(group: GroupOptions<NewerContext>) => {
         const prefix = options.prefix ? `${options.prefix}${group.prefix}` : group.prefix;
-        const middleware = pipe(options.middleware, group.middleware);
+        const middlewares: Middleware<NewContext | NewerContext>[] = [];
+        if (options.middleware) middlewares.push(options.middleware);
+        if (group.middleware) middlewares.push(group.middleware);
+        const middleware = pipe(...middlewares) as Middleware<NewContext & NewerContext>;
         return this.group({ prefix, middleware });
       },
     };
