@@ -8,7 +8,7 @@ import {
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
 import { json } from '@glass-cannon/server';
 import type { Response as RawResponse } from '@glass-cannon/server';
-import { type StaticDecode, type TSchema } from '@sinclair/typebox';
+import { Type, type StaticDecode, type TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
 
 export interface RouteSchema {
@@ -41,7 +41,7 @@ export type ValidatedResponse<Schema extends RouteSchema = RouteSchema> = {
   [K in keyof Schema['response']]: Schema['response'][K] extends TSchema
     ? Response<AsNumber<K>, StaticDecode<Schema['response'][K]>>
     : never;
-}[number];
+}[keyof Schema['response']];
 
 export type ValidatedRouteHandler<Context, NewContext, Schema extends RouteSchema> = (
   request: RouteContext<Context & ValidatedContext<Schema> & NewContext>
