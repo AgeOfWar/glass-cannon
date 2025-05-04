@@ -11,7 +11,8 @@ export function json({
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
-  if (!headers.has('Content-Type') && body !== undefined) {
+  if (body === undefined) return { status, headers };
+  if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
   return { status, headers, body: writeJson(body) };
@@ -23,10 +24,11 @@ export function text({
   headers: customHeaders,
 }: {
   status: number;
-  body: string;
+  body?: string;
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
+  if (body === undefined) return { status, headers };
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'text/plain');
   }
@@ -39,10 +41,11 @@ export function html({
   headers: customHeaders,
 }: {
   status: number;
-  body: string;
+  body?: string;
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
+  if (body === undefined) return { status, headers };
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'text/html');
   }

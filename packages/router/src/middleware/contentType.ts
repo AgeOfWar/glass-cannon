@@ -7,7 +7,7 @@ export interface ContentTypeOptions {
   onInvalidContentType?: (context: RouteContext) => Promise<Response> | Response;
 }
 
-export function textBody(options?: ContentTypeOptions): Middleware<{ text: string }> {
+export function textBody(options?: ContentTypeOptions): Middleware<{ body: string }> {
   const allowNoContent = options?.allowNoConent ?? true;
   const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
 
@@ -15,7 +15,7 @@ export function textBody(options?: ContentTypeOptions): Middleware<{ text: strin
     const contentType = context.headers.get('Content-Type');
     if (!contentType) {
       if (allowNoContent) {
-        return await handler({ text: '' });
+        return await handler({ body: '' });
       } else {
         return await onInvalidContentType(context);
       }
@@ -24,17 +24,17 @@ export function textBody(options?: ContentTypeOptions): Middleware<{ text: strin
     if (!contentType.startsWith('text/plain')) return await onInvalidContentType(context);
     const charsetMatch = /charset=([^;]*)/i.exec(contentType);
     const encoding = (charsetMatch?.[1]?.trim().toLowerCase() ?? 'utf-8') as BufferEncoding;
-    let text: string;
+    let body: string;
     try {
-      text = await readText(context.body, encoding);
+      body = await readText(context.stream, encoding);
     } catch {
       return await onInvalidContentType(context);
     }
-    return await handler({ text });
+    return await handler({ body });
   };
 }
 
-export function jsonBody(options?: ContentTypeOptions): Middleware<{ json: unknown }> {
+export function jsonBody(options?: ContentTypeOptions): Middleware<{ body: unknown }> {
   const allowNoContent = options?.allowNoConent ?? true;
   const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
 
@@ -42,19 +42,19 @@ export function jsonBody(options?: ContentTypeOptions): Middleware<{ json: unkno
     const contentType = context.headers.get('Content-Type');
     if (!contentType) {
       if (allowNoContent) {
-        return await handler({ json: undefined });
+        return await handler({ body: undefined });
       } else {
         return await onInvalidContentType(context);
       }
     }
 
     if (!contentType.startsWith('application/json')) return await onInvalidContentType(context);
-    let json: unknown;
+    let body: unknown;
     try {
-      json = await readJson(context.body, 'utf-8');
+      body = await readJson(context.stream, 'utf-8');
     } catch {
       return await onInvalidContentType(context);
     }
-    return await handler({ json });
+    return await handler({ body });
   };
 }

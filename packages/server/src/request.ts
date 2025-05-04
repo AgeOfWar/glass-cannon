@@ -6,5 +6,5 @@ export interface Request {
   url: URL;
   method: string;
   headers: Headers;
-  body: RequestBody;
+  stream: RequestBody;
 }

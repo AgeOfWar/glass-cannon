@@ -1,14 +1,14 @@
 {
-  "name": "benchmark",
+  "name": "@glass-cannon/example",
   "type": "module",
   "private": true,
   "exports": {
     ".": "./dist/index.ts"
   },
   "dependencies": {
-    "@glass-cannon/server-node": "workspace:*",
-    "@glass-cannon/server-bun": "workspace:*",
-    "@glass-cannon/router": "workspace:*"
+    "@glass-cannon/server-node": "^0.2.0",
+    "@glass-cannon/router": "^0.2.0",
+    "@glass-cannon/typebox": "^0.2.0"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -17,6 +17,6 @@
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun --cwd=../router run build && bun run ./src/index.ts"
+    "dev": "bun run ./src/index.ts"
   }
 }
