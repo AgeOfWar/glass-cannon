@@ -48,7 +48,7 @@ export class BunServer implements Server {
       url: new URL(request.url),
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
-      body: (request.body as ReadableStream<Uint8Array> | null) ?? this.emptyReadableStream(),
+      stream: (request.body as ReadableStream<Uint8Array> | null) ?? this.emptyReadableStream(),
     };
   }
 

@@ -78,7 +78,7 @@ export class NodeServer implements Server {
       url: new URL(`http://${host}${request.url}`),
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
-      body: Readable.toWeb(request) as ReadableStream<Uint8Array>,
+      stream: Readable.toWeb(request) as ReadableStream<Uint8Array>,
     };
   }
 
