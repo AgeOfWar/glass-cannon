@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/server-node",
   "type": "module",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -10,7 +10,7 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/server": "0.0.5"
+    "@glass-cannon/server": "0.0.6"
   },
   "devDependencies": {
     "@types/bun": "latest"
