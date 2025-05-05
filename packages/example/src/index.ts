@@ -16,24 +16,22 @@ const v1 = typebox(
   })
 );
 
-v1.route(
-  v1.validated({
-    method: 'GET',
-    path: '/double',
-    schema: {
-      body: Type.Number(),
-      response: {
-        200: Type.Object({
-          result: Type.Number(),
-        }),
-      },
+v1.validatedRoute({
+  method: 'GET',
+  path: '/double',
+  schema: {
+    body: Type.Number(),
+    response: {
+      200: Type.Object({
+        result: Type.Number(),
+      }),
     },
-    middleware: pipe(log, authenticate),
-    handler({ body }) {
-      return { status: 200, body: { result: body * 2 } };
-    },
-  })
-);
+  },
+  middleware: pipe(log, authenticate),
+  handler({ body }) {
+    return { status: 200, body: { result: body * 2 } };
+  },
+});
 
 const server = new NodeServer(router.handle);
 const runningServer = await server.listen({ host: '127.0.0.1', port: 3000 });

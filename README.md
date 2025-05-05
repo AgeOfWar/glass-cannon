@@ -111,7 +111,7 @@ router.route({
 });
 ```
 
-### Groups
+## Groups
 
 Glass Cannon provides a powerful way to organize routes and middleware using groups. Groups allow you to define a common prefix and shared middleware for a set of related routes, simplifying the management of complex APIs.
 
@@ -140,4 +140,52 @@ v1.route({
     return json({ status: 200, body: { result: body * 2 } });
   },
 });
+```
+
+## TypeBox Integration
+
+Glass Cannon integrates seamlessly with [TypeBox](https://github.com/sinclairzx81/typebox) to provide runtime validation and type-safe schemas for your routes. This integration ensures that your API requests and responses adhere to defined schemas, improving reliability and developer experience.
+
+### Example: Validating Requests and Responses
+
+Here's an example of using TypeBox to validate the request body and response:
+
+```typescript
+import { Router } from '@glass-cannon/router';
+import { jsonBody } from '@glass-cannon/router/middleware';
+import { typebox } from '@glass-cannon/typebox';
+import { Type } from '@sinclair/typebox';
+
+// Create a router with JSON body parsing middleware
+const router = new Router({
+  middleware: jsonBody(),
+});
+
+// Wrap router group with TypeBox integration
+const v1 = typebox(
+  router.group({
+    prefix: '/v1',
+    middleware: jsonBody(),
+  })
+);
+
+// Define a validated route
+v1.validatedRoute({
+  schema: {
+    body: Type.Number(),
+    response: {
+      200: Type.Object({
+        result: Type.Number(),
+      }),
+    },
+  },
+  path: '/double',
+  // body type is inferred as number
+  handler: ({ body }) => {
+    // return a status code different from 200 results in an error, same for body
+    return { status: 200, body: { result: body * 2 } };
+  },
+});
+
+// Could also be written as v1.route(v1.validated({ ... }))
 ```
