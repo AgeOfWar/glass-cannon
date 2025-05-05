@@ -19,7 +19,7 @@ export interface RouteSchema {
 }
 
 export interface ValidatedContext<Schema extends RouteSchema> {
-  json: Schema['body'] extends TSchema ? StaticDecode<Schema['body']> : undefined;
+  body: Schema['body'] extends TSchema ? StaticDecode<Schema['body']> : undefined;
   query: Schema['query'] extends TSchema ? StaticDecode<Schema['query']> : Record<string, never>;
   params: Schema['params'] extends TSchema ? StaticDecode<Schema['params']> : Record<string, never>;
 }
@@ -54,7 +54,7 @@ export interface ValidatedRouteOptions<Context, NewContext, Schema extends Route
   schema: Schema;
   middleware?: Middleware<NewContext>;
   handler: ValidatedRouteHandler<Context, NewContext, Schema>;
-  onInvalidRequest?: RouteHandler<{ json: unknown } & ValidationErrorContext>;
+  onInvalidRequest?: RouteHandler<ValidationErrorContext>;
   serializeResponse?: (response: ValidatedResponse<Schema>) => RawResponse | Promise<RawResponse>;
 }
 
@@ -64,7 +64,7 @@ export interface ValidationErrorContext {
 
 export interface TypeBoxGroupOptions {
   serializeResponse?: (response: ValidatedResponse) => RawResponse | Promise<RawResponse>;
-  onInvalidRequest?: RouteHandler<{ json: unknown } & ValidationErrorContext>;
+  onInvalidRequest?: RouteHandler<ValidationErrorContext>;
 }
 
 export function typebox<Context>(
@@ -75,7 +75,7 @@ export function typebox<Context>(
 }
 
 export class TypeBoxGroup<Context> implements RouterGroup<Context> {
-  private readonly onInvalidRequest: RouteHandler<{ json: unknown } & ValidationErrorContext>;
+  private readonly onInvalidRequest: RouteHandler<ValidationErrorContext>;
   private readonly serializeResponse: (
     response: ValidatedResponse
   ) => RawResponse | Promise<RawResponse>;
@@ -88,18 +88,6 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
     this.serializeResponse = options?.serializeResponse ?? json;
   }
 
-  validated<NewContext, Schema extends RouteSchema = RouteSchema>(
-    options: ValidatedRouteOptions<Context, NewContext, Schema>
-  ): void {
-    this.routerGroup.route(
-      validated({
-        ...options,
-        onInvalidRequest: options.onInvalidRequest ?? this.onInvalidRequest,
-        serializeResponse: options.serializeResponse ?? this.serializeResponse,
-      })
-    );
-  }
-
   route<NewContext>(options: RouteOptions<Context, NewContext>): void {
     this.routerGroup.route(options);
   }
@@ -107,45 +95,49 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
   group<NewContext>(options: GroupOptions<NewContext>): TypeBoxGroup<Context & NewContext> {
     return new TypeBoxGroup(this.routerGroup.group(options));
   }
-}
 
-export function validated<Context, NewContext, Schema extends RouteSchema>(
-  options: ValidatedRouteOptions<Context, NewContext, Schema>
-): RouteOptions<Context, ValidatedContext<Schema> & NewContext> {
-  const validationMiddleware = validation(options.schema, options.onInvalidRequest);
-  const serializeResponse = options.serializeResponse ?? json;
+  validated<Context, NewContext, Schema extends RouteSchema>(
+    options: ValidatedRouteOptions<Context, NewContext, Schema>
+  ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> & { schema: Schema } {
+    const validationMiddleware = validation(
+      options.schema,
+      options.onInvalidRequest ?? this.onInvalidRequest
+    );
+    const serializeResponse = options.serializeResponse ?? this.serializeResponse;
 
-  return {
-    method: options.method,
-    path: options.path,
-    middleware: options.middleware
-      ? pipe(validationMiddleware, options.middleware)
-      : (validationMiddleware as Middleware<ValidatedContext<Schema> & NewContext>),
-    handler: async (context) => {
-      const response = await options.handler(context);
-      return await serializeResponse(response);
-    },
-  };
+    return {
+      method: options.method,
+      path: options.path,
+      middleware: options.middleware
+        ? pipe(validationMiddleware, options.middleware)
+        : (validationMiddleware as Middleware<ValidatedContext<Schema> & NewContext>),
+      handler: async (context) => {
+        const response = await options.handler(context);
+        return await serializeResponse(response);
+      },
+      schema: options.schema,
+    };
+  }
 }
 
 export function validation<Schema extends RouteSchema>(
   schema: Schema,
-  onInvalidRequest?: RouteHandler<{ json: unknown } & ValidationErrorContext>
+  onInvalidRequest?: RouteHandler<ValidationErrorContext>
 ): Middleware<ValidatedContext<Schema>> {
   const bodyValidator = schema.body && TypeCompiler.Compile(schema.body);
   const queryValidator = schema.query && TypeCompiler.Compile(schema.query);
   const paramsValidator = schema.params && TypeCompiler.Compile(schema.params);
 
   return async (next, context) => {
-    if (!('json' in context)) {
-      throw new Error('validated route must be used with a context that has json field');
+    if (!('body' in context)) {
+      throw new Error('validated route must be used with a context that has body field');
     }
 
     const errors: ValueError[] = [];
 
-    const json = context.json;
+    const body = context.body;
     if (bodyValidator) {
-      for (const error of bodyValidator.Errors(json)) {
+      for (const error of bodyValidator.Errors(body)) {
         errors.push(error);
       }
     }
@@ -166,14 +158,12 @@ export function validation<Schema extends RouteSchema>(
 
     if (errors.length > 0) {
       return onInvalidRequest
-        ? await onInvalidRequest({ ...context, errors } as RouteContext<
-            { json: unknown } & ValidationErrorContext
-          >)
+        ? await onInvalidRequest({ ...context, errors } as RouteContext<ValidationErrorContext>)
         : { status: 400 };
     }
 
     return await next({
-      json: bodyValidator?.Decode(json),
+      body: bodyValidator?.Decode(body),
       params: queryValidator?.Decode(query) ?? {},
       query: paramsValidator?.Decode(params) ?? {},
     } as ValidatedContext<Schema>);
