@@ -96,7 +96,13 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
     return new TypeBoxGroup(this.routerGroup.group(options));
   }
 
-  validated<Context, NewContext, Schema extends RouteSchema>(
+  validatedRoute<NewContext, Schema extends RouteSchema>(
+    options: ValidatedRouteOptions<Context, NewContext, Schema>
+  ): void {
+    this.route(this.validated(options));
+  }
+
+  validated<NewContext, Schema extends RouteSchema>(
     options: ValidatedRouteOptions<Context, NewContext, Schema>
   ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> & { schema: Schema } {
     const validationMiddleware = validation(
