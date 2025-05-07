@@ -1,32 +1,36 @@
-import { readJson, readText, type Response } from '@glass-cannon/server';
+import { readJson, readText, type RequestBody, type Response } from '@glass-cannon/server';
 import type { Middleware } from '.';
 import type { RouteContext } from '..';
 
 export interface ContentTypeOptions {
-  allowNoConent?: boolean;
+  allowNoContent?: boolean;
   onInvalidContentType?: (context: RouteContext) => Promise<Response> | Response;
 }
 
-export function textBody(options?: ContentTypeOptions): Middleware<{ body: string }> {
-  const allowNoContent = options?.allowNoConent ?? true;
-  const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
-
+export function contentType<T>({
+  contentType,
+  deserializeRequest,
+  allowNoContent = true,
+  onInvalidContentType = () => ({ status: 415 }),
+}: {
+  contentType: string;
+  deserializeRequest: (body?: RequestBody) => Promise<T> | T;
+} & ContentTypeOptions): Middleware<{ body: T }> {
   return async (handler, context) => {
-    const contentType = context.headers.get('Content-Type');
-    if (!contentType) {
+    const contentTypeHeader = context.headers.get('Content-Type');
+    if (!contentTypeHeader) {
       if (allowNoContent) {
-        return await handler({ body: '' });
+        const body = await deserializeRequest();
+        return await handler({ body });
       } else {
         return await onInvalidContentType(context);
       }
     }
 
-    if (!contentType.startsWith('text/plain')) return await onInvalidContentType(context);
-    const charsetMatch = /charset=([^;]*)/i.exec(contentType);
-    const encoding = (charsetMatch?.[1]?.trim().toLowerCase() ?? 'utf-8') as BufferEncoding;
-    let body: string;
+    if (!contentTypeHeader.startsWith(contentType)) return await onInvalidContentType(context);
+    let body: T;
     try {
-      body = await readText(context.stream, encoding);
+      body = await deserializeRequest(context.stream);
     } catch {
       return await onInvalidContentType(context);
     }
@@ -34,27 +38,18 @@ export function textBody(options?: ContentTypeOptions): Middleware<{ body: strin
   };
 }
 
+export function textBody(options?: ContentTypeOptions): Middleware<{ body: string }> {
+  return contentType({
+    contentType: 'text/plain',
+    deserializeRequest: (body) => (body ? readText(body, 'utf-8') : ''),
+    ...options,
+  });
+}
+
 export function jsonBody(options?: ContentTypeOptions): Middleware<{ body: unknown }> {
-  const allowNoContent = options?.allowNoConent ?? true;
-  const onInvalidContentType = options?.onInvalidContentType ?? (() => ({ status: 415 }));
-
-  return async (handler, context) => {
-    const contentType = context.headers.get('Content-Type');
-    if (!contentType) {
-      if (allowNoContent) {
-        return await handler({ body: undefined });
-      } else {
-        return await onInvalidContentType(context);
-      }
-    }
-
-    if (!contentType.startsWith('application/json')) return await onInvalidContentType(context);
-    let body: unknown;
-    try {
-      body = await readJson(context.stream, 'utf-8');
-    } catch {
-      return await onInvalidContentType(context);
-    }
-    return await handler({ body });
-  };
+  return contentType({
+    contentType: 'application/json',
+    deserializeRequest: (body) => body && readJson(body),
+    ...options,
+  });
 }

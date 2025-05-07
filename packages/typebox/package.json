@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/typebox",
   "type": "module",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -10,9 +10,10 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@glass-cannon/router": "^0.2.0",
+    "@glass-cannon/router": "^0.3.0",
     "@glass-cannon/server": "^0.2.0",
-    "@sinclair/typebox": "^0.34.33"
+    "@sinclair/typebox": "^0.34.33",
+    "openapi3-ts": "^4.4.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

@@ -1,13 +1,12 @@
 import {
   type GroupOptions,
   type RouteContext,
-  type RouteHandler,
   type RouteOptions,
   type RouterGroup,
 } from '@glass-cannon/router';
-import { pipe, type Middleware } from '@glass-cannon/router/middleware';
-import { json } from '@glass-cannon/server';
-import type { Response as RawResponse } from '@glass-cannon/server';
+import { contentType, pipe, type Middleware } from '@glass-cannon/router/middleware';
+import { readJson, writeJson } from '@glass-cannon/server';
+import type { Response as RawResponse, RequestBody, ResponseBody } from '@glass-cannon/server';
 import { type StaticDecode, type TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
 
@@ -54,8 +53,17 @@ export interface ValidatedRouteOptions<Context, NewContext, Schema extends Route
   schema: Schema;
   middleware?: Middleware<NewContext>;
   handler: ValidatedRouteHandler<Context, NewContext, Schema>;
-  onInvalidRequest?: RouteHandler<ValidationErrorContext>;
-  serializeResponse?: (response: ValidatedResponse<Schema>) => RawResponse | Promise<RawResponse>;
+  onInvalidRequest?: (
+    request: RouteContext & ValidationErrorContext
+  ) => Promise<RawResponse> | RawResponse;
+  deserializeRequest?: {
+    contentType: string;
+    deserialize: (body?: RequestBody) => unknown;
+  };
+  serializeResponse?: {
+    contentType: string;
+    serialize: (response: unknown) => ResponseBody;
+  };
 }
 
 export interface ValidationErrorContext {
@@ -63,8 +71,17 @@ export interface ValidationErrorContext {
 }
 
 export interface TypeBoxGroupOptions {
-  serializeResponse?: (response: ValidatedResponse) => RawResponse | Promise<RawResponse>;
-  onInvalidRequest?: RouteHandler<ValidationErrorContext>;
+  deserializeRequest?: {
+    contentType: string;
+    deserialize: (body?: RequestBody) => unknown;
+  };
+  serializeResponse?: {
+    contentType: string;
+    serialize: (response: unknown) => ResponseBody;
+  };
+  onInvalidRequest?: (
+    request: RouteContext & ValidationErrorContext
+  ) => Promise<RawResponse> | RawResponse;
 }
 
 export function typebox<Context>(
@@ -75,17 +92,31 @@ export function typebox<Context>(
 }
 
 export class TypeBoxGroup<Context> implements RouterGroup<Context> {
-  private readonly onInvalidRequest: RouteHandler<ValidationErrorContext>;
-  private readonly serializeResponse: (
-    response: ValidatedResponse
-  ) => RawResponse | Promise<RawResponse>;
+  private readonly onInvalidRequest: (
+    request: RouteContext & ValidationErrorContext
+  ) => Promise<RawResponse> | RawResponse;
+  private readonly serializeResponse: {
+    contentType: string;
+    serialize: (response: unknown) => ResponseBody;
+  };
+  private readonly deserializeRequest: {
+    contentType: string;
+    deserialize: (body?: RequestBody) => unknown;
+  };
 
   constructor(
     private readonly routerGroup: RouterGroup<Context>,
     options?: TypeBoxGroupOptions
   ) {
     this.onInvalidRequest = options?.onInvalidRequest ?? (() => ({ status: 400 }));
-    this.serializeResponse = options?.serializeResponse ?? json;
+    this.serializeResponse = options?.serializeResponse ?? {
+      contentType: 'application/json',
+      serialize: (body: unknown) => writeJson(body),
+    };
+    this.deserializeRequest = options?.deserializeRequest ?? {
+      contentType: 'application/json',
+      deserialize: (body?: RequestBody) => body && readJson(body),
+    };
   }
 
   route<NewContext>(options: RouteOptions<Context, NewContext>): void {
@@ -104,40 +135,56 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
 
   validated<NewContext, Schema extends RouteSchema>(
     options: ValidatedRouteOptions<Context, NewContext, Schema>
-  ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> & { schema: Schema } {
+  ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> {
     const validationMiddleware = validation(
       options.schema,
       options.onInvalidRequest ?? this.onInvalidRequest
     );
+    const deserializeRequest = options.deserializeRequest ?? this.deserializeRequest;
     const serializeResponse = options.serializeResponse ?? this.serializeResponse;
+
+    const contentTypeMiddleware = contentType({
+      contentType: deserializeRequest.contentType,
+      deserializeRequest: (body) => deserializeRequest.deserialize(body),
+      allowNoContent: true,
+      onInvalidContentType: async () => ({ status: 415 }),
+    });
 
     return {
       method: options.method,
       path: options.path,
       middleware: options.middleware
-        ? pipe(validationMiddleware, options.middleware)
-        : (validationMiddleware as Middleware<ValidatedContext<Schema> & NewContext>),
+        ? pipe(contentTypeMiddleware, validationMiddleware, options.middleware)
+        : (pipe(contentTypeMiddleware, validationMiddleware) as Middleware<
+            ValidatedContext<Schema> & NewContext
+          >),
       handler: async (context) => {
-        const response = await options.handler(context);
-        return await serializeResponse(response);
+        const { status, body, headers: headersInit } = await options.handler(context);
+        const headers = new Headers(headersInit);
+        if (body === undefined) {
+          return { status, headers };
+        }
+        if (!headers.has('Content-Type')) {
+          headers.set('Content-Type', serializeResponse.contentType);
+        }
+        return { status, body: serializeResponse.serialize(body), headers };
       },
-      schema: options.schema,
     };
   }
 }
 
 export function validation<Schema extends RouteSchema>(
   schema: Schema,
-  onInvalidRequest?: RouteHandler<ValidationErrorContext>
+  onInvalidRequest: (
+    request: RouteContext & ValidationErrorContext
+  ) => Promise<RawResponse> | RawResponse = () => ({ status: 400 })
 ): Middleware<ValidatedContext<Schema>> {
   const bodyValidator = schema.body && TypeCompiler.Compile(schema.body);
   const queryValidator = schema.query && TypeCompiler.Compile(schema.query);
   const paramsValidator = schema.params && TypeCompiler.Compile(schema.params);
 
   return async (next, context) => {
-    if (!('body' in context)) {
-      throw new Error('validated route must be used with a context that has body field');
-    }
+    if (!('body' in context)) throw new Error('should not happen');
 
     const errors: ValueError[] = [];
 
@@ -163,15 +210,13 @@ export function validation<Schema extends RouteSchema>(
     }
 
     if (errors.length > 0) {
-      return onInvalidRequest
-        ? await onInvalidRequest({ ...context, errors } as RouteContext<ValidationErrorContext>)
-        : { status: 400 };
+      return await onInvalidRequest({ ...context, errors });
     }
 
     return await next({
       body: bodyValidator?.Decode(body),
       params: queryValidator?.Decode(query) ?? {},
       query: paramsValidator?.Decode(params) ?? {},
-    } as ValidatedContext<Schema>);
+    });
   };
 }
