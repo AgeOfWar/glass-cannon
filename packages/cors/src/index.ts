@@ -10,6 +10,13 @@ export interface CorsOptions {
   maxAge?: number;
 }
 
+export function cors<Context>(
+  group: RouterGroup<Context>,
+  options: CorsOptions
+): CorsGroup<Context> {
+  return new CorsGroup(group, options);
+}
+
 export class CorsGroup<Context> implements RouterGroup<Context> {
   private readonly allowOrigin: (origin: string) => boolean;
   private readonly allowMethods: string[];
