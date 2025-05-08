@@ -78,9 +78,7 @@ export class CorsGroup<Context> implements RouterGroup<Context> {
     return { status, body, headers };
   };
 
-  preflight<NewContext>(
-    options: RouteOptions<Context, NewContext>
-  ): RouteOptions<Context, unknown> {
+  preflight<NewContext>(options: RouteOptions<Context, NewContext>): RouteOptions<Context> {
     return {
       method: 'OPTIONS',
       path: options.path,

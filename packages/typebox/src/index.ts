@@ -168,7 +168,7 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
       if (options.method) {
         this.registerSchema(options.method, options.path, options.schema);
       } else {
-        for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) {
+        for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) {
           this.registerSchema(method, options.path, options.schema);
         }
       }
@@ -268,17 +268,19 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
             name,
             in: 'path',
             schema,
+            required: !TypeGuard.IsOptional(schema),
             description: schema.description,
           })),
           ...Object.entries(schema.query ?? {}).map(([name, schema]) => ({
             name,
             in: 'query',
             schema,
+            required: !TypeGuard.IsOptional(schema),
             description: schema.description,
           })),
         ],
         responses: mapValues(schema.response, (schema) => ({
-          description: schema.description,
+          description: schema.description ?? '',
           ...(!TypeGuard.IsUndefined(schema) &&
             !TypeGuard.IsNever(schema) && {
               content: {
