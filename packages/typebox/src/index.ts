@@ -115,6 +115,8 @@ export function typebox<Context>(
 }
 
 export class TypeBoxGroup<Context> implements RouterGroup<Context> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private parent?: TypeBoxGroup<any>;
   private readonly builder: OpenApiBuilder | undefined;
   private readonly schemaTransform: SchemaTransform;
 
@@ -166,12 +168,9 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
       if (options.method) {
         this.registerSchema(options.method, options.path, options.schema);
       } else {
-        this.registerSchema('GET', options.path, options.schema);
-        this.registerSchema('POST', options.path, options.schema);
-        this.registerSchema('PUT', options.path, options.schema);
-        this.registerSchema('DELETE', options.path, options.schema);
-        this.registerSchema('PATCH', options.path, options.schema);
-        this.registerSchema('OPTIONS', options.path, options.schema);
+        for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) {
+          this.registerSchema(method, options.path, options.schema);
+        }
       }
     }
   }
@@ -179,7 +178,7 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
   group<NewContext>(
     options: GroupOptions<NewContext> & { schemaTransform?: SchemaTransform }
   ): TypeBoxGroup<Context & NewContext> {
-    return new TypeBoxGroup(this.routerGroup.group(options), {
+    const group = new TypeBoxGroup(this.routerGroup.group(options), {
       deserializeRequest: this.deserializeRequest,
       serializeResponse: this.serializeResponse,
       onInvalidRequest: this.onInvalidRequest,
@@ -196,6 +195,8 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
           : this.schemaTransform,
       },
     });
+    group.parent = this;
+    return group;
   }
 
   validatedRoute<NewContext, Schema extends RouteSchema>(
@@ -290,6 +291,7 @@ export class TypeBoxGroup<Context> implements RouterGroup<Context> {
       },
     };
     this.builder.addPath(path, spec);
+    if (this.parent) this.parent.registerSchema(method, path, schema);
   }
 
   openapi(): OpenAPIObject {
