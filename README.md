@@ -197,7 +197,7 @@ Glass Cannon makes it easy to handle CORS (Cross-Origin Resource Sharing). This 
 
 ### Esempio: Abilitare CORS su tutte le rotte
 
-Puoi usare `cors` fornito dal pacchetto `@glass-cannon/cors` per aggiungere gli header CORS alle risposte HTTP:
+You can use the `cors` from the `@glass-cannon/cors` package to add CORS headers to HTTP responses:
 
 ```typescript
 import { cors } from '@glass-cannon/cors';
