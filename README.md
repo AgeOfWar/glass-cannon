@@ -20,6 +20,7 @@ This project is organized as a monorepo with the following packages:
 - **[@glass-cannon/server-bun](packages/server-bun)**: Bun server implementation.
 - **[@glass-cannon/router](packages/router)**: Routing and middleware utilities.
 - **[@glass-cannon/typebox](packages/typebox)**: TypeBox integration for request validation.
+- **[@glass-cannon/cors](packages/cors)**: CORS policies for your APIs.
 
 ## Getting Started
 
@@ -188,4 +189,26 @@ v1.validatedRoute({
 });
 
 // Could also be written as v1.route(v1.validated({ ... }))
+```
+
+## CORS
+
+Glass Cannon makes it easy to handle CORS (Cross-Origin Resource Sharing). This allows you to enable or configure CORS policies for your APIs in a simple and modular way.
+
+### Esempio: Abilitare CORS su tutte le rotte
+
+Puoi usare `cors` fornito dal pacchetto `@glass-cannon/cors` per aggiungere gli header CORS alle risposte HTTP:
+
+```typescript
+import { cors } from '@glass-cannon/cors';
+
+const group = cors(router, { allowOrigin: (origin) => origin === 'www.example.com' });
+
+group.route({
+  method: 'GET',
+  path: '/',
+  handler() {
+    return { status: 200, body: 'CORS enabled!' };
+  },
+});
 ```
