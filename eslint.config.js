@@ -24,6 +24,7 @@ export default tseslint.config({
     '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
     '@typescript-eslint/no-unnecessary-condition': ['error', { allowConstantLoopConditions: true }],
+    'prefer-const': ['error', { destructuring: 'all' }],
     '@typescript-eslint/no-unused-vars': [
       'warn',
       { argsIgnorePattern: '.*', varsIgnorePattern: '^_' },

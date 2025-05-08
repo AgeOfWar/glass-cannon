@@ -15,12 +15,26 @@
         "typescript": "^5",
       },
     },
+    "packages/cors": {
+      "name": "@glass-cannon/cors",
+      "version": "0.3.0",
+      "dependencies": {
+        "@glass-cannon/router": "^0.3.0",
+        "@glass-cannon/server": "^0.2.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/example": {
       "name": "@glass-cannon/example",
       "dependencies": {
         "@glass-cannon/router": "^0.2.0",
         "@glass-cannon/server-node": "^0.2.0",
-        "@glass-cannon/typebox": "^0.2.0",
+        "@glass-cannon/typebox": "^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -31,7 +45,7 @@
     },
     "packages/router": {
       "name": "@glass-cannon/router",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@glass-cannon/server": "^0.2.0",
       },
@@ -78,9 +92,9 @@
     },
     "packages/typebox": {
       "name": "@glass-cannon/typebox",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
-        "@glass-cannon/router": "^0.2.0",
+        "@glass-cannon/router": "^0.3.0",
         "@glass-cannon/server": "^0.2.0",
         "@sinclair/typebox": "^0.34.33",
         "openapi3-ts": "^4.4.0",
@@ -109,6 +123,8 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.6", "", {}, "sha512-RBMg5FRL0I0gs51M/guSAj5/e14VQ4tpZnQNWwuDT66P14I43ItmPfIZRhO9fUVIPOAQXU47atlywZ/czoqFPA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.2.7", "", { "dependencies": { "@eslint/core": "^0.12.0", "levn": "^0.4.1" } }, "sha512-JubJ5B2pJ4k4yGxaNLdbjrnk9d/iDz6/q8wOilpIowd6PJPgaxCuHBnBszq7Ce2TyMrywm5r4PnKm6V3iiZF+g=="],
+
+    "@glass-cannon/cors": ["@glass-cannon/cors@workspace:packages/cors"],
 
     "@glass-cannon/example": ["@glass-cannon/example@workspace:packages/example"],
 
@@ -390,6 +406,10 @@
 
     "@eslint/eslintrc/minimatch": ["minimatch@3.1.2", "", { "dependencies": { "brace-expansion": "^1.1.7" } }, "sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw=="],
 
+    "@glass-cannon/cors/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
+
+    "@glass-cannon/example/@glass-cannon/router": ["@glass-cannon/router@0.2.0", "", { "dependencies": { "@glass-cannon/server": "^0.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-UUeXKOG9250Kkcqfk7uqC972i3l5N12/Fl//4VVakwunb1wLiVfeU9/ii52wJITPCkyO8eqSZnZLkxXFjDKs4A=="],
+
     "@glass-cannon/example/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
 
     "@glass-cannon/router/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
@@ -415,6 +435,8 @@
     "@eslint/config-array/minimatch/brace-expansion": ["brace-expansion@1.1.11", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA=="],
 
     "@eslint/eslintrc/minimatch/brace-expansion": ["brace-expansion@1.1.11", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA=="],
+
+    "@glass-cannon/cors/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
 
     "@glass-cannon/example/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
 

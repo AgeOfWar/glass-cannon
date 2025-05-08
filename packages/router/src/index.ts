@@ -31,7 +31,7 @@ export interface RouterOptions<Context = unknown> {
   middleware?: Middleware<Context>;
 }
 
-export interface RouteOptions<Context, NewContext = undefined> {
+export interface RouteOptions<Context, NewContext = unknown> {
   method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
   middleware?: Middleware<NewContext>;
