@@ -1,14 +1,16 @@
 {
   "name": "@glass-cannon/server",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@types/bun": "latest",
     "tsc-alias": "^1.8.12"
