@@ -6,9 +6,9 @@
     ".": "./dist/index.ts"
   },
   "dependencies": {
-    "@glass-cannon/server-node": "0.8.2",
-    "@glass-cannon/router": "0.8.2",
-    "@glass-cannon/typebox": "0.8.2"
+    "@glass-cannon/server-node": "0.8.3",
+    "@glass-cannon/router": "0.8.3",
+    "@glass-cannon/typebox": "0.8.3"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -19,5 +19,5 @@
   "scripts": {
     "dev": "bun run ./src/index.ts"
   },
-  "version": "0.8.2"
+  "version": "0.8.3"
 }
