@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/cors",
   "type": "module",
-  "version": "0.8.4",
+  "version": "0.8.6",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -12,8 +12,8 @@
     "dist"
   ],
   "dependencies": {
-    "@glass-cannon/router": "0.8.4",
-    "@glass-cannon/server": "0.8.4"
+    "@glass-cannon/router": "0.8.6",
+    "@glass-cannon/server": "0.8.6"
   },
   "devDependencies": {
     "@types/bun": "latest"
