@@ -152,10 +152,12 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   private computeScore(path: string): number {
     let score = 0;
     for (const c of path) {
-      if (c === ':') {
-        score += 1;
-      } else if (c === '/') {
+      if (c === '/') {
         score += 2;
+      } else if (c === ':') {
+        score -= 1;
+      } else if (c === '*') {
+        score -= 2;
       }
     }
     return score;
