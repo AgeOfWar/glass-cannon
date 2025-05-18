@@ -358,8 +358,8 @@ export function validation<Schema extends RouteSchema>(
 
     return await next({
       body: bodyValidator?.Decode(body),
-      params: queryValidator?.Decode(query) ?? {},
-      query: paramsValidator?.Decode(params) ?? {},
+      params: paramsValidator?.Decode(params) ?? {},
+      query: queryValidator?.Decode(query) ?? {},
     } as ValidatedContext<Schema>);
   };
 }

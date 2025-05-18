@@ -16,10 +16,12 @@ const v1 = typebox(
 );
 
 v1.validatedRoute({
-  method: 'POST',
+  method: 'GET',
   path: '/double',
   schema: {
-    body: Type.Number(),
+    query: {
+      x: Type.Number(),
+    },
     response: {
       200: Type.Object({
         result: Type.Number(),
@@ -27,8 +29,8 @@ v1.validatedRoute({
     },
   },
   middleware: pipe(log, authenticate),
-  handler({ body }) {
-    return { status: 200, body: { result: body * 2 } };
+  handler({ query }) {
+    return { status: 200, body: { result: query.x * 2 } };
   },
 });
 
