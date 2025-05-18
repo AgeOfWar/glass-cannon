@@ -36,15 +36,15 @@ export interface RouteSchema {
 
 export interface ValidatedContext<Schema extends RouteSchema> {
   body: Schema['body'] extends TSchema ? StaticDecode<Schema['body']> : undefined;
-  query: Schema['query'] extends TSchema
+  query: Schema['query'] extends Record<string, TSchema>
     ? StaticDecode<TObject<Schema['query']>>
     : Record<string, never>;
-  params: Schema['params'] extends TSchema
+  params: Schema['params'] extends Record<string, TSchema>
     ? StaticDecode<TObject<Schema['params']>>
     : Record<string, never>;
 }
 
-export type Response<StatusCode extends number, T> = undefined extends T
+export type Response<StatusCode extends number = number, T = unknown> = undefined extends T
   ? {
       status: StatusCode;
       body?: T;
@@ -114,7 +114,7 @@ export function typebox<Context>(
   return new TypeBoxGroup(routerGroup, options);
 }
 
-export class TypeBoxGroup<Context> implements RouterGroup<Context> {
+export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private parent?: TypeBoxGroup<any>;
   private readonly builder: OpenApiBuilder | undefined;
