@@ -16,12 +16,12 @@ export function contentType<T>({
   contentType: string;
   deserializeRequest: (body?: RequestBody) => Promise<T> | T;
 } & ContentTypeOptions): Middleware<{ body: T }> {
-  return async (handler, context) => {
+  return async (next, context) => {
     const contentTypeHeader = context.headers.get('Content-Type');
     if (!contentTypeHeader) {
       if (allowNoContent) {
         const body = await deserializeRequest();
-        return await handler({ body });
+        return await next({ body });
       } else {
         return await onInvalidContentType(context);
       }
@@ -34,7 +34,7 @@ export function contentType<T>({
     } catch {
       return await onInvalidContentType(context);
     }
-    return await handler({ body });
+    return await next({ body });
   };
 }
 

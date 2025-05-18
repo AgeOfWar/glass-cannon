@@ -17,7 +17,7 @@
     },
     "packages/cors": {
       "name": "@glass-cannon/cors",
-      "version": "0.3.0",
+      "version": "0.8.0",
       "dependencies": {
         "@glass-cannon/router": "^0.3.0",
         "@glass-cannon/server": "^0.2.0",
@@ -31,10 +31,11 @@
     },
     "packages/example": {
       "name": "@glass-cannon/example",
+      "version": "0.8.0",
       "dependencies": {
-        "@glass-cannon/router": "^0.2.0",
-        "@glass-cannon/server-node": "^0.2.0",
-        "@glass-cannon/typebox": "^0.3.0",
+        "@glass-cannon/router": "0.8.0",
+        "@glass-cannon/server-node": "0.8.0",
+        "@glass-cannon/typebox": "0.8.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -45,9 +46,9 @@
     },
     "packages/router": {
       "name": "@glass-cannon/router",
-      "version": "0.3.0",
+      "version": "0.8.0",
       "dependencies": {
-        "@glass-cannon/server": "^0.2.0",
+        "@glass-cannon/server": "0.8.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -58,7 +59,7 @@
     },
     "packages/server": {
       "name": "@glass-cannon/server",
-      "version": "0.2.0",
+      "version": "0.8.0",
       "devDependencies": {
         "@types/bun": "latest",
         "tsc-alias": "^1.8.12",
@@ -69,7 +70,7 @@
     },
     "packages/server-bun": {
       "name": "@glass-cannon/server-bun",
-      "version": "0.2.0",
+      "version": "0.8.0",
       "dependencies": {
         "@glass-cannon/server": "^0.2.0",
       },
@@ -82,9 +83,9 @@
     },
     "packages/server-node": {
       "name": "@glass-cannon/server-node",
-      "version": "0.2.0",
+      "version": "0.8.0",
       "dependencies": {
-        "@glass-cannon/server": "^0.2.0",
+        "@glass-cannon/server": "0.8.0",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -92,10 +93,10 @@
     },
     "packages/typebox": {
       "name": "@glass-cannon/typebox",
-      "version": "0.3.0",
+      "version": "0.8.0",
       "dependencies": {
-        "@glass-cannon/router": "^0.3.0",
-        "@glass-cannon/server": "^0.2.0",
+        "@glass-cannon/router": "0.8.0",
+        "@glass-cannon/server": "0.8.0",
         "@sinclair/typebox": "^0.34.33",
         "openapi3-ts": "^4.4.0",
       },
@@ -408,17 +409,15 @@
 
     "@glass-cannon/cors/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
 
-    "@glass-cannon/example/@glass-cannon/router": ["@glass-cannon/router@0.2.0", "", { "dependencies": { "@glass-cannon/server": "^0.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-UUeXKOG9250Kkcqfk7uqC972i3l5N12/Fl//4VVakwunb1wLiVfeU9/ii52wJITPCkyO8eqSZnZLkxXFjDKs4A=="],
+    "@glass-cannon/example/@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 
-    "@glass-cannon/example/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
+    "@glass-cannon/router/@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 
-    "@glass-cannon/router/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
-
-    "@glass-cannon/server/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
+    "@glass-cannon/server/@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 
     "@glass-cannon/server-bun/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
 
-    "@glass-cannon/typebox/@types/bun": ["@types/bun@1.2.12", "", { "dependencies": { "bun-types": "1.2.12" } }, "sha512-lY/GQTXDGsolT/TiH72p1tuyUORuRrdV7VwOTOjDOt8uTBJQOJc5zz3ufwwDl0VBaoxotSk4LdP0hhjLJ6ypIQ=="],
+    "@glass-cannon/typebox/@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 
     "@humanfs/node/@humanwhocodes/retry": ["@humanwhocodes/retry@0.3.1", "", {}, "sha512-JBxkERygn7Bv/GbN5Rv8Ul6LVknS+5Bp6RgDC/O8gEBU/yeH5Ui5C/OlWrTb6qct7LjjfT6Re2NxB0ln0yYybA=="],
 
@@ -438,15 +437,15 @@
 
     "@glass-cannon/cors/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
 
-    "@glass-cannon/example/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
+    "@glass-cannon/example/@types/bun/bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
 
-    "@glass-cannon/router/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
+    "@glass-cannon/router/@types/bun/bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
 
     "@glass-cannon/server-bun/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
 
-    "@glass-cannon/server/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
+    "@glass-cannon/server/@types/bun/bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
 
-    "@glass-cannon/typebox/@types/bun/bun-types": ["bun-types@1.2.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA=="],
+    "@glass-cannon/typebox/@types/bun/bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
 
     "eslint/minimatch/brace-expansion": ["brace-expansion@1.1.11", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA=="],
   }

@@ -1,6 +1,6 @@
 import { NodeServer } from '@glass-cannon/server-node';
 import { Router } from '@glass-cannon/router';
-import { jsonBody, noop, pipe } from '@glass-cannon/router/middleware';
+import { noop, pipe } from '@glass-cannon/router/middleware';
 import { typebox } from '@glass-cannon/typebox';
 import { Type } from '@sinclair/typebox';
 
@@ -12,12 +12,11 @@ const router = new Router();
 const v1 = typebox(
   router.group({
     prefix: '/v1',
-    middleware: jsonBody(),
   })
 );
 
 v1.validatedRoute({
-  method: 'GET',
+  method: 'POST',
   path: '/double',
   schema: {
     body: Type.Number(),

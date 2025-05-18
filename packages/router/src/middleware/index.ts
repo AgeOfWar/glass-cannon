@@ -24,7 +24,7 @@ export type PipeMiddlewares<Middlewares extends Middleware[]> = Middlewares exte
 export function pipe<Middlewares extends Middleware[]>(
   ...middlewares: Middlewares
 ): PipeMiddlewares<Middlewares> {
-  return middlewares.reduceRight(pipeTwo, noop) as PipeMiddlewares<Middlewares>;
+  return middlewares.reduce(pipeTwo, noop) as PipeMiddlewares<Middlewares>;
 }
 
 function pipeTwo<Context1, Context2>(
@@ -32,10 +32,12 @@ function pipeTwo<Context1, Context2>(
   middleware2: Middleware<Context2>
 ): Middleware<Context1 & Context2> {
   return (next, context) => {
-    return middleware1(
-      (context1) => middleware2((context2) => next({ ...context1, ...context2 }), context),
-      context
-    );
+    return middleware1((newContext1) => {
+      return middleware2((newContext2) => next({ ...newContext1, ...newContext2 }), {
+        ...context,
+        ...newContext1,
+      });
+    }, context);
   };
 }
 
@@ -51,6 +53,6 @@ export function applyMiddleware<Context, NewContext>(
   };
 }
 
-export const noop: Middleware = (handler, context) => {
-  return handler({});
+export const noop: Middleware = (next) => {
+  return next({});
 };
