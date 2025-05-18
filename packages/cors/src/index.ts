@@ -17,7 +17,7 @@ export function cors<Context>(
   return new CorsGroup(group, options);
 }
 
-export class CorsGroup<Context> implements RouterGroup<Context> {
+export class CorsGroup<Context = unknown> implements RouterGroup<Context> {
   private readonly allowOrigin: (origin: string) => boolean;
   private readonly allowMethods: string[];
   private readonly allowHeaders: string[];

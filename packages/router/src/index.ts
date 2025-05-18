@@ -6,7 +6,7 @@ const ALL_METHODS = '*';
 
 type StringWithSuggestions<T> = T | (string & {});
 
-export type RouteHandler<Context> = (
+export type RouteHandler<Context = unknown> = (
   request: RouteContext<Context>
 ) => Promise<Response> | Response;
 
@@ -15,13 +15,13 @@ export type RouteContext<Context = unknown> = Request & {
   route: Route<Context>;
 } & Context;
 
-export interface Route<Context> {
+export interface Route<Context = unknown> {
   method?: string;
   path: string;
   handler: RouteHandler<Context>;
 }
 
-export interface RouterGroup<Context> {
+export interface RouterGroup<Context = unknown> {
   route<NewContext>(options: RouteOptions<Context, NewContext>): void;
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext>;
 }
@@ -31,14 +31,14 @@ export interface RouterOptions<Context = unknown> {
   middleware?: Middleware<Context>;
 }
 
-export interface RouteOptions<Context, NewContext = unknown> {
+export interface RouteOptions<Context = unknown, NewContext = unknown> {
   method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
   middleware?: Middleware<NewContext>;
   handler: RouteHandler<Context & NewContext>;
 }
 
-export interface GroupOptions<Context> {
+export interface GroupOptions<Context = unknown> {
   prefix?: string;
   middleware?: Middleware<Context>;
 }
