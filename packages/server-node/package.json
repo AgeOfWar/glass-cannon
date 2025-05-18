@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/server-node",
   "type": "module",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -12,7 +12,7 @@
     "dist"
   ],
   "dependencies": {
-    "@glass-cannon/server": "0.8.0"
+    "@glass-cannon/server": "0.8.1"
   },
   "peerDependencies": {
     "typescript": "^5"
