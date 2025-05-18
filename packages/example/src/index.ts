@@ -3,6 +3,7 @@ import { Router } from '@glass-cannon/router';
 import { noop, pipe } from '@glass-cannon/router/middleware';
 import { typebox } from '@glass-cannon/typebox';
 import { Type } from '@sinclair/typebox';
+import { BunServer } from '@glass-cannon/server-bun';
 
 const log = noop;
 const authenticate = noop;
@@ -34,6 +35,10 @@ v1.validatedRoute({
   },
 });
 
-const server = new NodeServer(router.handle);
-const runningServer = await server.listen({ host: '127.0.0.1', port: 3000 });
-console.log(`Server is running on ${runningServer.url}`);
+const serverNode = new NodeServer(router.handle);
+const runningServerNode = await serverNode.listen({ host: '127.0.0.1', port: 3000 });
+console.log(`Node Server is running on ${runningServerNode.url}`);
+
+const serverBun = new BunServer(router.handle);
+const runningServerBun = await serverBun.listen({ host: '127.0.0.1', port: 3001 });
+console.log(`Bun Server is running on ${runningServerBun.url}`);

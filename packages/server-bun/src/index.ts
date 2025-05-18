@@ -69,7 +69,7 @@ export class BunServer implements Server {
     }
 
     const { readable, writable } = new TransformStream<Uint8Array>();
-    await response.body(writable as WritableStream<Uint8Array>);
+    void response.body(writable as WritableStream<Uint8Array>).then(() => writable.close());
     return new globalThis.Response(readable, {
       status: response.status,
       headers: response.headers,
