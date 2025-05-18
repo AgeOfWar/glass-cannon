@@ -9,6 +9,7 @@ import { readJson, writeJson } from '@glass-cannon/server';
 import type { Response as RawResponse, RequestBody, ResponseBody } from '@glass-cannon/server';
 import { Type, TypeGuard, type StaticDecode, type TObject, type TSchema } from '@sinclair/typebox';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
+import { Value } from '@sinclair/typebox/value';
 import {
   OpenApiBuilder,
   type ComponentsObject,
@@ -321,22 +322,31 @@ export function validation<Schema extends RouteSchema>(
 
     const errors: ValueError[] = [];
 
-    const body = context.body;
+    let body = context.body;
     if (bodyValidator) {
+      body = Value.Clean(bodyValidator.Schema(), body);
+      body = Value.Default(bodyValidator.Schema(), body);
+      body = Value.Convert(bodyValidator.Schema(), body);
       for (const error of bodyValidator.Errors(body)) {
         errors.push(error);
       }
     }
 
-    const query = Object.fromEntries(context.url.searchParams.entries());
+    let query = Object.fromEntries(context.url.searchParams.entries()) as unknown;
     if (queryValidator) {
+      query = Value.Clean(queryValidator.Schema(), query);
+      query = Value.Default(queryValidator.Schema(), query);
+      query = Value.Convert(queryValidator.Schema(), query);
       for (const error of queryValidator.Errors(query)) {
         errors.push(error);
       }
     }
 
-    const params = context.params;
+    let params = context.params as unknown;
     if (paramsValidator) {
+      params = Value.Clean(paramsValidator.Schema(), params);
+      params = Value.Default(paramsValidator.Schema(), params);
+      params = Value.Convert(paramsValidator.Schema(), params);
       for (const error of paramsValidator.Errors(params)) {
         errors.push(error);
       }
