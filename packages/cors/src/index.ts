@@ -1,4 +1,4 @@
-import type { GroupOptions, RouteOptions, RouterGroup } from '@glass-cannon/router';
+import type { GroupOptions, Route, RouteOptions, RouterGroup } from '@glass-cannon/router';
 import { pipe, type Middleware } from '@glass-cannon/router/middleware';
 
 export interface CorsOptions {
@@ -37,12 +37,12 @@ export class CorsGroup<Context = unknown> implements RouterGroup<Context> {
     this.maxAge = options.maxAge;
   }
 
-  route<NewContext>(options: RouteOptions<Context, NewContext>): void {
+  route<NewContext>(options: RouteOptions<Context, NewContext>): Route {
     const middleware = options.middleware
       ? pipe(this.middleware, options.middleware)
       : (this.middleware as Middleware<NewContext>);
-    this.routerGroup.route({ ...options, middleware });
     this.routerGroup.route(this.preflight(options));
+    return this.routerGroup.route({ ...options, middleware });
   }
 
   group<NewContext>(options: GroupOptions<NewContext>): CorsGroup<Context & NewContext> {
