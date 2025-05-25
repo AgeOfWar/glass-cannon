@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Handler, Request, Response } from '@glass-cannon/server';
 import { applyMiddleware, noop, pipe, type Middleware } from './middleware';
 
@@ -12,17 +11,17 @@ export type RouteHandler<Context = unknown> = (
 
 export type RouteContext<Context = unknown> = Request & {
   params: Record<string, string>;
-  route: Route<Context>;
+  route: Route;
 } & Context;
 
-export interface Route<Context = unknown> {
+export interface Route {
   method?: string;
   path: string;
-  handler: RouteHandler<Context>;
+  handler: RouteHandler;
 }
 
 export interface RouterGroup<Context = unknown> {
-  route<NewContext>(options: RouteOptions<Context, NewContext>): void;
+  route<NewContext>(options: RouteOptions<Context, NewContext>): Route;
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext>;
 }
 
@@ -43,8 +42,8 @@ export interface GroupOptions<Context = unknown> {
   middleware?: Middleware<Context>;
 }
 
-interface RouteWithMetadata<Context> {
-  route: Route<Context>;
+interface RouteWithMetadata {
+  route: Route;
   regex: string;
   score: number;
   capturingRegex: RegExp;
@@ -55,15 +54,14 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   private readonly middleware: Middleware<Context>;
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  private routes: Record<string, [RouteWithMetadata<any>[], RegExp | undefined]> =
-    Object.create(null);
+  private routes: Record<string, [RouteWithMetadata[], RegExp | undefined]> = Object.create(null);
 
   constructor(options?: RouterOptions<Context>) {
     this.fallback = options?.fallback ?? (() => ({ status: 404 }));
     this.middleware = options?.middleware ?? (noop as Middleware<Context>);
   }
 
-  matchingRoute(method: string, path: string): Route<Context> | undefined {
+  matchingRoute(method: string, path: string): Route | undefined {
     return this.matchingRouteWithMetadata(method, path)?.route;
   }
 
@@ -77,19 +75,20 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
 
     const params = { ...capturingRegex.exec(path)!.groups };
     const context = { ...request, params, route };
-    return await applyMiddleware(this.middleware, route.handler)(context);
+    return await route.handler(context);
   };
 
-  route<NewContext>(route: RouteOptions<Context, NewContext>): void {
-    const handler: RouteHandler<Context> = route.middleware
-      ? applyMiddleware(route.middleware, route.handler)
-      : (route.handler as RouteHandler<Context>);
+  route<NewContext>(route: RouteOptions<Context, NewContext>): Route {
+    const handler: RouteHandler = route.middleware
+      ? applyMiddleware(this.middleware, applyMiddleware(route.middleware, route.handler))
+      : applyMiddleware(this.middleware, route.handler as RouteHandler<Context>);
     const path = route.path.endsWith('/') ? route.path.slice(0, -1) : route.path;
     const metadata = this.computeMetadata({ method: route.method, path, handler });
     const method = route.method?.toUpperCase() ?? ALL_METHODS;
     this.routes[method] ??= [[], undefined];
     binaryInsert(this.routes[method][0], metadata, (route) => route.score);
     this.routes[method][1] = undefined;
+    return metadata.route;
   }
 
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext> {
@@ -103,7 +102,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
         if (options.middleware) middlewares.push(options.middleware);
         if (route.middleware) middlewares.push(route.middleware);
         const middleware = pipe(...middlewares) as Middleware<NewContext & NewerContext>;
-        this.route({ ...route, path, middleware });
+        return this.route({ ...route, path, middleware });
       },
       group: <NewerContext>(group: GroupOptions<NewerContext>) => {
         const newPrefix = `${prefix}${group.prefix}`;
@@ -116,10 +115,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     };
   }
 
-  private matchingRouteWithMetadata(
-    method: string,
-    path: string
-  ): RouteWithMetadata<any> | undefined {
+  private matchingRouteWithMetadata(method: string, path: string): RouteWithMetadata | undefined {
     const routes = this.routes[method];
     if (!routes) return this.matchingGeneralRouteWithMetadata(path);
 
@@ -132,7 +128,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     return routes[0][matchIndex];
   }
 
-  private matchingGeneralRouteWithMetadata(path: string): RouteWithMetadata<any> | undefined {
+  private matchingGeneralRouteWithMetadata(path: string): RouteWithMetadata | undefined {
     const routes = this.routes[ALL_METHODS];
     if (!routes) return;
 
@@ -145,7 +141,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     return routes[0][matchIndex];
   }
 
-  private computeMetadata(route: Route<any>): RouteWithMetadata<any> {
+  private computeMetadata(route: Route): RouteWithMetadata {
     const score = this.computeScore(route.path);
     const regex = this.pathToRegex(route.path);
     const capturingRegex = new RegExp(this.pathToCapturingRegex(route.path));

@@ -1,5 +1,6 @@
 import {
   type GroupOptions,
+  type Route,
   type RouteContext,
   type RouteOptions,
   type RouterGroup,
@@ -163,17 +164,18 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
     this.schemaTransform = options?.openapi?.schemaTransform ?? ((spec) => spec);
   }
 
-  route<NewContext>(options: RouteOptions<Context, NewContext> & { schema?: RouteSchema }): void {
-    this.routerGroup.route(options);
+  route<NewContext>(options: RouteOptions<Context, NewContext> & { schema?: RouteSchema }): Route {
+    const route = this.routerGroup.route(options);
     if (options.schema) {
-      if (options.method) {
-        this.registerSchema(options.method, options.path, options.schema);
+      if (route.method) {
+        this.registerSchema(route.method, route.path, options.schema);
       } else {
         for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) {
-          this.registerSchema(method, options.path, options.schema);
+          this.registerSchema(method, route.path, options.schema);
         }
       }
     }
+    return route;
   }
 
   group<NewContext>(
