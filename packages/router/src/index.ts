@@ -84,7 +84,8 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
     const handler: RouteHandler<Context> = route.middleware
       ? applyMiddleware(route.middleware, route.handler)
       : (route.handler as RouteHandler<Context>);
-    const metadata = this.computeMetadata({ method: route.method, path: route.path, handler });
+    const path = route.path.endsWith('/') ? route.path.slice(0, -1) : route.path;
+    const metadata = this.computeMetadata({ method: route.method, path, handler });
     const method = route.method?.toUpperCase() ?? ALL_METHODS;
     this.routes[method] ??= [[], undefined];
     binaryInsert(this.routes[method][0], metadata, (route) => route.score);
@@ -92,9 +93,12 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
   }
 
   group<NewContext>(options: GroupOptions<NewContext>): RouterGroup<Context & NewContext> {
+    const prefix = options.prefix?.endsWith('/')
+      ? options.prefix.slice(0, -1)
+      : (options.prefix ?? '');
     return {
       route: <NewerContext>(route: RouteOptions<Context & NewContext, NewerContext>) => {
-        const path = options.prefix ? `${options.prefix}${route.path}` : route.path;
+        const path = `${prefix}${route.path}`;
         const middlewares: Middleware<NewContext | NewerContext>[] = [];
         if (options.middleware) middlewares.push(options.middleware);
         if (route.middleware) middlewares.push(route.middleware);
@@ -102,12 +106,12 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
         this.route({ ...route, path, middleware });
       },
       group: <NewerContext>(group: GroupOptions<NewerContext>) => {
-        const prefix = options.prefix ? `${options.prefix}${group.prefix}` : group.prefix;
+        const newPrefix = `${prefix}${group.prefix}`;
         const middlewares: Middleware<NewContext | NewerContext>[] = [];
         if (options.middleware) middlewares.push(options.middleware);
         if (group.middleware) middlewares.push(group.middleware);
         const middleware = pipe(...middlewares) as Middleware<NewContext & NewerContext>;
-        return this.group({ prefix, middleware });
+        return this.group({ prefix: newPrefix, middleware });
       },
     };
   }
@@ -171,7 +175,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
         .replace(/\\:([a-zA-Z0-9_]+)\*/g, '(?:.*)')
         .replace(/\\\*/g, '(?:.*)')
         .replace(/\\:([a-zA-Z0-9_]+)/g, '(?:[^/]+)') +
-      ')$'
+      '/?)$'
     );
   }
 
@@ -183,7 +187,7 @@ export class Router<Context = unknown> implements RouterGroup<Context> {
         .replace(/\\:([a-zA-Z0-9_]+)\*/g, '(?<$1>.*)')
         .replace(/\\\*/g, '(?:.*)')
         .replace(/\\:([a-zA-Z0-9_]+)/g, '(?<$1>[^/]+)') +
-      '$'
+      '/?$'
     );
   }
 
