@@ -204,8 +204,8 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
 
   validatedRoute<NewContext, Schema extends RouteSchema>(
     options: ValidatedRouteOptions<Context, NewContext, Schema>
-  ): void {
-    this.route(this.validated(options));
+  ): Route {
+    return this.route(this.validated(options));
   }
 
   validated<NewContext, Schema extends RouteSchema>(
