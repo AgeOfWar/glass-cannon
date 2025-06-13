@@ -195,7 +195,7 @@ v1.validatedRoute({
 
 Glass Cannon makes it easy to handle CORS (Cross-Origin Resource Sharing). This allows you to enable or configure CORS policies for your APIs in a simple and modular way.
 
-### Esempio: Abilitare CORS su tutte le rotte
+### Example: Enable CORS for all routes
 
 You can use the `cors` from the `@glass-cannon/cors` package to add CORS headers to HTTP responses:
 
