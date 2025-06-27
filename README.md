@@ -87,7 +87,7 @@ router.route({
 });
 ```
 
-### Pipe middlewares
+### Pipe middleware
 
 You can combine multiple middleware functions using the `pipe` utility. Here's an example that combines a logging middleware with an authentication middleware:
 
