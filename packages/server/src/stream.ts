@@ -1,17 +1,18 @@
 import type { RequestBody } from './request';
 import type { ResponseBody } from './response';
 
-export function writeText(text: string, encoding: BufferEncoding = 'utf-8'): ResponseBody {
+export function writeText(text: string): ResponseBody {
   return async (stream) => {
     const writer = stream.getWriter();
-    await writer.write(Buffer.from(text, encoding));
+    const encoder = new TextEncoder();
+    await writer.write(encoder.encode(text));
     writer.releaseLock();
   };
 }
 
-export function writeJson(json: unknown, encoding: BufferEncoding = 'utf-8'): ResponseBody {
+export function writeJson(json: unknown): ResponseBody {
   if (json === undefined) return async () => {};
-  return writeText(JSON.stringify(json), encoding);
+  return writeText(JSON.stringify(json));
 }
 
 export async function readText(
