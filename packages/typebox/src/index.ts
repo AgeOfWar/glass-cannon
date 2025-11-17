@@ -9,6 +9,7 @@ import { contentType, pipe, type Middleware } from '@glass-cannon/router/middlew
 import { readJson, writeJson } from '@glass-cannon/server';
 import type { Response as RawResponse, RequestBody, ResponseBody } from '@glass-cannon/server';
 import { Type, TypeGuard, type StaticDecode, type TObject, type TSchema } from '@sinclair/typebox';
+import type { ValueErrorIterator } from '@sinclair/typebox/compiler';
 import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
 import { Value } from '@sinclair/typebox/value';
 import {
@@ -107,6 +108,7 @@ export interface TypeBoxGroupOptions {
     webhooks?: PathsObject;
     schemaTransform?: SchemaTransform;
   };
+  aot?: boolean;
 }
 
 export function typebox<Context>(
@@ -121,6 +123,7 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
   private parent?: TypeBoxGroup<any>;
   private readonly builder: OpenApiBuilder | undefined;
   private readonly schemaTransform: SchemaTransform;
+  private readonly aot: boolean = true;
 
   private readonly onInvalidRequest: (
     request: RouteContext & ValidationErrorContext
@@ -162,6 +165,7 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
       });
     }
     this.schemaTransform = options?.openapi?.schemaTransform ?? ((spec) => spec);
+    this.aot = options?.aot ?? true;
   }
 
   route<NewContext>(options: RouteOptions<Context, NewContext> & { schema?: RouteSchema }): Route {
@@ -211,7 +215,7 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
   validated<NewContext, Schema extends RouteSchema>(
     options: ValidatedRouteOptions<Context, NewContext, Schema>
   ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> & { schema: RouteSchema } {
-    const validationMiddleware = validation(options.schema, this.onInvalidRequest);
+    const validationMiddleware = validation(options.schema, this.onInvalidRequest, this.aot);
 
     const contentTypeMiddleware = contentType({
       contentType: this.deserializeRequest.contentType,
@@ -313,11 +317,12 @@ export function validation<Schema extends RouteSchema>(
   schema: Schema,
   onInvalidRequest: (
     request: RouteContext & ValidationErrorContext
-  ) => Promise<RawResponse> | RawResponse = () => ({ status: 400 })
+  ) => Promise<RawResponse> | RawResponse = () => ({ status: 400 }),
+  aot = true
 ): Middleware<ValidatedContext<Schema>> {
-  const bodyValidator = schema.body && TypeCompiler.Compile(schema.body);
-  const queryValidator = schema.query && TypeCompiler.Compile(Type.Object(schema.query));
-  const paramsValidator = schema.params && TypeCompiler.Compile(Type.Object(schema.params));
+  const bodyValidator = schema.body && compile(schema.body, aot);
+  const queryValidator = schema.query && compile(Type.Object(schema.query), aot);
+  const paramsValidator = schema.params && compile(Type.Object(schema.params), aot);
 
   return async (next, context) => {
     if (!('body' in context)) throw new Error('should not happen');
@@ -364,6 +369,23 @@ export function validation<Schema extends RouteSchema>(
       query: queryValidator?.Decode(query) ?? {},
     } as ValidatedContext<Schema>);
   };
+}
+
+function compile(
+  schema: TSchema,
+  aot: boolean
+): {
+  Errors: (value: unknown) => ValueErrorIterator;
+  Schema: () => TSchema;
+  Decode: (value: unknown) => unknown;
+} {
+  return aot
+    ? TypeCompiler.Compile(schema)
+    : {
+        Errors: (value) => Value.Errors(schema, value),
+        Decode: (value) => Value.Decode(schema, value),
+        Schema: () => schema,
+      };
 }
 
 function mapValues<T, U>(obj: Record<string, T>, fn: (value: T) => U): Record<string, U> {
