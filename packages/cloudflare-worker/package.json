@@ -1,0 +1,26 @@
+{
+  "name": "@glass-cannon/cloudflare-worker",
+  "type": "module",
+  "version": "0.10.2",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@glass-cannon/server": "0.10.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias"
+  },
+  "devDependencies": {
+    "wrangler": "^4.47.0"
+  }
+}
