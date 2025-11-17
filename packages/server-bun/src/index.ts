@@ -6,8 +6,8 @@ import type {
   RunningServer,
   Server,
 } from '@glass-cannon/server';
-import type { WritableStream } from 'node:stream/web';
-import { ReadableStream } from 'node:stream/web';
+import type { WritableStream } from 'stream/web';
+import { ReadableStream } from 'stream/web';
 
 export * from '@glass-cannon/server';
 
