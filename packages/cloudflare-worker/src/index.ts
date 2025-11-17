@@ -17,7 +17,7 @@ export async function fetch(
         start(controller) {
           controller.close();
         },
-      })) as RequestBody,
+      })) as unknown as RequestBody,
   });
 
   if (response.body === undefined) {
