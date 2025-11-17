@@ -123,7 +123,7 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
   private parent?: TypeBoxGroup<any>;
   private readonly builder: OpenApiBuilder | undefined;
   private readonly schemaTransform: SchemaTransform;
-  private readonly aot: boolean = true;
+  private readonly aot: boolean;
 
   private readonly onInvalidRequest: (
     request: RouteContext & ValidationErrorContext
@@ -201,6 +201,7 @@ export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
           ? (spec) => options.schemaTransform!(this.schemaTransform(spec))
           : this.schemaTransform,
       },
+      aot: this.aot,
     });
     group.parent = this;
     return group;
