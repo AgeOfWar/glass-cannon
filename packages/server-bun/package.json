@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/server-bun",
   "type": "module",
-  "version": "0.10.6",
+  "version": "0.10.7",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -12,13 +12,13 @@
     "dist"
   ],
   "dependencies": {
-    "@glass-cannon/server": "0.10.6"
+    "@glass-cannon/server": "0.10.7"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5 || ^6"
   },
   "scripts": {
     "build": "tsc && tsc-alias"

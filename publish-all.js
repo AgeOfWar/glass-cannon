@@ -54,7 +54,7 @@ function updatePackageVersion(packageDir, newVersion) {
 function publishPackage(packageDir) {
   console.log(`Publishing ${packageDir}...`);
   try {
-    child_process.execSync("npm publish --access public", {
+    child_process.execSync("bun run build && npm publish --access public", {
       cwd: packageDir,
       stdio: "inherit"
     });

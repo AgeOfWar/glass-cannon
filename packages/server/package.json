@@ -1,7 +1,7 @@
 {
   "name": "@glass-cannon/server",
   "type": "module",
-  "version": "0.10.6",
+  "version": "0.10.7",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -16,7 +16,7 @@
     "tsc-alias": "^1.8.12"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5 || ^6"
   },
   "scripts": {
     "build": "tsc && tsc-alias"

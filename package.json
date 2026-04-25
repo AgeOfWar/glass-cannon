@@ -11,7 +11,7 @@
     "typescript-eslint": "8.25.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5 || ^6"
   },
   "scripts": {
     "format": "prettier --write .",
@@ -20,5 +20,5 @@
   "workspaces": [
     "packages/*"
   ],
-  "version": "0.10.6"
+  "version": "0.10.7"
 }
