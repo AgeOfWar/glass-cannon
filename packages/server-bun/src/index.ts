@@ -6,8 +6,6 @@ import type {
   RunningServer,
   Server,
 } from '@glass-cannon/server';
-import type { WritableStream } from 'stream/web';
-import { ReadableStream } from 'stream/web';
 
 export * from '@glass-cannon/server';
 
@@ -48,7 +46,7 @@ export class BunServer implements Server {
       url: new URL(request.url),
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
-      stream: (request.body as ReadableStream<Uint8Array> | null) ?? this.emptyReadableStream(),
+      stream: request.body ?? this.emptyReadableStream(),
     };
   }
 
@@ -69,7 +67,7 @@ export class BunServer implements Server {
     }
 
     const { readable, writable } = new TransformStream<Uint8Array>();
-    void response.body(writable as WritableStream<Uint8Array>).then(() => writable.close());
+    void response.body(writable).then(() => writable.close());
     return new globalThis.Response(readable, {
       status: response.status,
       headers: response.headers,

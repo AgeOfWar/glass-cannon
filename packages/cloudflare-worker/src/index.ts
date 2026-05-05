@@ -1,5 +1,4 @@
 import type { Handler, RequestBody } from '@glass-cannon/server';
-import type { WritableStream } from 'stream/web';
 
 export * from '@glass-cannon/server';
 
@@ -28,7 +27,7 @@ export async function fetch(
   }
 
   const { readable, writable } = new TransformStream<Uint8Array>();
-  ctx.waitUntil(response.body(writable as WritableStream<Uint8Array>).then(() => writable.close()));
+  ctx.waitUntil(response.body(writable).then(() => writable.close()));
   return new Response(readable, {
     status: response.status,
     headers: response.headers,

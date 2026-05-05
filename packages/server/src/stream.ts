@@ -1,3 +1,4 @@
+import type { BufferEncoding } from 'typescript';
 import type { RequestBody } from './request';
 import type { ResponseBody } from './response';
 
