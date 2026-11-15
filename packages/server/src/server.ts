@@ -1,6 +1,3 @@
-import type { Request } from './request';
-import type { Response } from './response';
-
 export interface ListenOptions {
   host?: string;
   port: number;

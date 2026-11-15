@@ -1,6 +1,3 @@
-import type { Response } from './response';
-import { writeJson, writeText } from './stream';
-
 export function json({
   status,
   body,
@@ -11,11 +8,11 @@ export function json({
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
-  if (body === undefined) return { status, headers };
+  if (body === undefined) return new Response(null, { status, headers });
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  return { status, headers, body: writeJson(body) };
+  return new Response(JSON.stringify(body), { status, headers });
 }
 
 export function text({
@@ -28,11 +25,11 @@ export function text({
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
-  if (body === undefined) return { status, headers };
+  if (body === undefined) return new Response(null, { status, headers });
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'text/plain');
   }
-  return { status, headers, body: writeText(body) };
+  return new Response(body, { status, headers });
 }
 
 export function html({
@@ -45,9 +42,9 @@ export function html({
   headers?: HeadersInit;
 }): Response {
   const headers = new Headers(customHeaders);
-  if (body === undefined) return { status, headers };
+  if (body === undefined) return new Response(null, { status, headers });
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'text/html');
   }
-  return { status, headers, body: writeText(body) };
+  return new Response(body, { status, headers });
 }

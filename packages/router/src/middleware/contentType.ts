@@ -1,5 +1,4 @@
-import { readJson, readText, type RequestBody, type Response } from '@glass-cannon/server';
-import type { Middleware } from '.';
+import { middleware, type MiddlewareWrapper } from '.';
 import type { RouteContext } from '..';
 
 export interface ContentTypeOptions {
@@ -11,17 +10,17 @@ export function contentType<T>({
   contentType,
   deserializeRequest,
   allowNoContent = true,
-  onInvalidContentType = () => ({ status: 415 }),
+  onInvalidContentType = () => new Response(null, { status: 415 }),
 }: {
   contentType: string;
-  deserializeRequest: (body?: RequestBody) => Promise<T> | T;
-} & ContentTypeOptions): Middleware<{ body: T }> {
-  return async (next, context) => {
-    const contentTypeHeader = context.headers.get('Content-Type');
-    if (!contentTypeHeader) {
+  deserializeRequest: (request?: Request) => Promise<T> | T;
+} & ContentTypeOptions): MiddlewareWrapper<{ body: T }> {
+  return middleware(async (next, context) => {
+    const contentTypeHeader = context.request.headers.get('Content-Type');
+    if (!contentTypeHeader || !context.request.body) {
       if (allowNoContent) {
         const body = await deserializeRequest();
-        return await next({ body });
+        return await next({ ...context, body });
       } else {
         return await onInvalidContentType(context);
       }
@@ -30,26 +29,26 @@ export function contentType<T>({
     if (!contentTypeHeader.startsWith(contentType)) return await onInvalidContentType(context);
     let body: T;
     try {
-      body = await deserializeRequest(context.stream);
+      body = await deserializeRequest(context.request);
     } catch {
       return await onInvalidContentType(context);
     }
-    return await next({ body });
-  };
+    return await next({ ...context, body });
+  });
 }
 
-export function textBody(options?: ContentTypeOptions): Middleware<{ body: string }> {
+export function textBody(options?: ContentTypeOptions): MiddlewareWrapper<{ body: string }> {
   return contentType({
     contentType: 'text/plain',
-    deserializeRequest: (body) => (body ? readText(body, 'utf-8') : ''),
+    deserializeRequest: (request) => (request ? request.text() : ''),
     ...options,
   });
 }
 
-export function jsonBody(options?: ContentTypeOptions): Middleware<{ body: unknown }> {
+export function jsonBody(options?: ContentTypeOptions): MiddlewareWrapper<{ body: unknown }> {
   return contentType({
     contentType: 'application/json',
-    deserializeRequest: (body) => body && readJson(body),
+    deserializeRequest: (request) => request?.json(),
     ...options,
   });
 }

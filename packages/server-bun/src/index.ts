@@ -1,11 +1,4 @@
-import type {
-  Handler,
-  ListenOptions,
-  Request,
-  Response,
-  RunningServer,
-  Server,
-} from '@glass-cannon/server';
+import type { Handler, ListenOptions, RunningServer, Server } from '@glass-cannon/server';
 
 export * from '@glass-cannon/server';
 
@@ -27,11 +20,7 @@ export class BunServer implements Server {
     const server = Bun.serve({
       hostname: host,
       port: port,
-      fetch: async (request) => {
-        const req = this.toRequest(request);
-        const res = await this.handler(req);
-        return await this.fromResponse(res);
-      },
+      fetch: (request) => this.handle(request),
     });
     return {
       host: server.hostname ?? host,
@@ -40,45 +29,9 @@ export class BunServer implements Server {
       stop: async () => server.stop(),
     };
   }
-
-  private toRequest(request: globalThis.Request): Request {
-    return {
-      url: new URL(request.url),
-      method: request.method,
-      headers: new Headers(request.headers as HeadersInit),
-      stream: request.body ?? this.emptyReadableStream(),
-    };
-  }
-
-  private emptyReadableStream(): ReadableStream<Uint8Array> {
-    return new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.close();
-      },
-    });
-  }
-
-  private async fromResponse(response: Response): Promise<globalThis.Response> {
-    if (response.body === undefined) {
-      return new globalThis.Response(null, {
-        status: response.status,
-        headers: response.headers,
-      });
-    }
-
-    const { readable, writable } = new TransformStream<Uint8Array>();
-    void response.body(writable).then(() => writable.close());
-    return new globalThis.Response(readable, {
-      status: response.status,
-      headers: response.headers,
-    });
-  }
 }
 
 export function defaultErrorHandler(error: unknown): Response {
   console.error(error);
-  return {
-    status: 500,
-    headers: new Headers(),
-  };
+  return new Response(null, { status: 500 });
 }

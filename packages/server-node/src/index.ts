@@ -1,12 +1,5 @@
 import http from 'node:http';
-import type {
-  Handler,
-  ListenOptions,
-  Request,
-  Response,
-  RunningServer,
-  Server,
-} from '@glass-cannon/server';
+import type { Handler, ListenOptions, RunningServer, Server } from '@glass-cannon/server';
 import { Readable, Writable } from 'node:stream';
 
 export * from '@glass-cannon/server';
@@ -31,7 +24,7 @@ export class NodeServer implements Server {
         void (async () => {
           try {
             const req = this.toRequest(request, host);
-            const res = await this.handler(req);
+            const res = await this.handle(req);
             await this.fromResponse(res, response);
           } catch (error) {
             const res = await this.errorHandler(error);
@@ -73,23 +66,27 @@ export class NodeServer implements Server {
     if (request.url === undefined || request.method === undefined) {
       throw new Error('Request URL is missing');
     }
-    return {
-      url: new URL(`http://${host}${request.url}`),
+    const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+    return new Request(`http://${host}${request.url}`, {
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
-      stream: Readable.toWeb(request) as ReadableStream<Uint8Array>,
-    };
+      body: hasBody ? (Readable.toWeb(request) as unknown as BodyInit) : null,
+      ...(hasBody ? { duplex: 'half' } : {}),
+    } as RequestInit);
   }
 
   private async fromResponse(
     response: Response,
     serverResponse: http.ServerResponse
   ): Promise<void> {
-    const headers = response.headers && headersToObject(response.headers);
+    const headers = headersToObject(response.headers);
     serverResponse.writeHead(response.status, undefined, headers);
-    const writable = Writable.toWeb(serverResponse) as WritableStream<Uint8Array>;
-    await response.body?.(writable);
-    serverResponse.end();
+    if (response.body) {
+      const writable = Writable.toWeb(serverResponse) as WritableStream<Uint8Array>;
+      await response.body.pipeTo(writable);
+    } else {
+      serverResponse.end();
+    }
   }
 }
 
@@ -107,8 +104,5 @@ function headersToObject(headers: Headers): Record<string, string[]> {
 
 export function defaultErrorHandler(error: unknown): Response {
   console.error(error);
-  return {
-    status: 500,
-    headers: new Headers(),
-  };
+  return new Response(null, { status: 500 });
 }

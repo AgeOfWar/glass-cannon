@@ -1,16 +1,23 @@
 import {
-  type GroupOptions,
-  type Route,
+  ALL_METHODS,
+  type NodeBuilder,
+  type Plugin,
   type RouteContext,
+  type RouteHandler,
+  type RouteNode,
   type RouteOptions,
-  type RouterGroup,
 } from '@glass-cannon/router';
-import { contentType, pipe, type Middleware } from '@glass-cannon/router/middleware';
-import { readJson, writeJson } from '@glass-cannon/server';
-import type { Response as RawResponse, RequestBody, ResponseBody } from '@glass-cannon/server';
+import {
+  apply,
+  contentType,
+  middleware,
+  type MergeRequires,
+  type Middleware,
+  type MiddlewareWrapper,
+} from '@glass-cannon/router/middleware';
+import { json } from '@glass-cannon/server';
 import { Type, TypeGuard, type StaticDecode, type TObject, type TSchema } from '@sinclair/typebox';
-import type { ValueErrorIterator } from '@sinclair/typebox/compiler';
-import { TypeCompiler, type ValueError } from '@sinclair/typebox/compiler';
+import { TypeCompiler, type ValueError, type ValueErrorIterator } from '@sinclair/typebox/compiler';
 import { Value } from '@sinclair/typebox/value';
 import {
   OpenApiBuilder,
@@ -66,17 +73,58 @@ export type ValidatedResponse<Schema extends RouteSchema = RouteSchema> = {
     : never;
 }[keyof Schema['response']];
 
-export type ValidatedRouteHandler<Context, NewContext, Schema extends RouteSchema> = (
-  request: RouteContext<Context & ValidatedContext<Schema> & NewContext>
+export type ValidatedRouteHandler<Schema extends RouteSchema, Requires = unknown> = (
+  request: Omit<RouteContext, 'params'> & NoInfer<ValidatedContext<Schema>> & Requires
 ) => Promise<ValidatedResponse<Schema>> | ValidatedResponse<Schema>;
 
+type CompatibleMiddlewareRequires<
+  Schema extends RouteSchema,
+  MiddlewareRequires,
+> = ValidatedContext<Schema> extends Pick<
+  MiddlewareRequires,
+  keyof MiddlewareRequires & keyof ValidatedContext<Schema>
+>
+  ? MiddlewareRequires
+  : Omit<MiddlewareRequires, keyof ValidatedContext<Schema>> & ValidatedContext<Schema>;
+
+export type ValidatedMiddleware<
+  Schema extends RouteSchema,
+  Provides = unknown,
+  MiddlewareRequires = unknown,
+  ContextRequires = unknown,
+  HandlerRequires = unknown,
+> = (
+  next: RouteHandler<Provides & NoInfer<CompatibleMiddlewareRequires<Schema, MiddlewareRequires>>>,
+  context: RouteContext &
+    NoInfer<ValidatedContext<Schema> & ContextRequires & HandlerRequires> &
+    MiddlewareRequires
+) => Promise<globalThis.Response> | globalThis.Response;
+
 type StringWithSuggestions<T> = T | (string & {});
-export interface ValidatedRouteOptions<Context, NewContext, Schema extends RouteSchema> {
+export interface ValidatedRouteOptions<
+  Schema extends RouteSchema,
+  HandlerRequires = unknown,
+  Provides = unknown,
+  MiddlewareRequires = unknown,
+  ContextRequires = unknown,
+> {
   method?: StringWithSuggestions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'>;
   path: string;
   schema: Schema;
-  middleware?: Middleware<NewContext>;
-  handler: ValidatedRouteHandler<Context, NewContext, Schema>;
+  middleware?: ValidatedMiddleware<
+    NoInfer<Schema>,
+    Provides,
+    MiddlewareRequires,
+    ContextRequires,
+    HandlerRequires
+  >;
+  handler: ValidatedRouteHandler<
+    Schema,
+    NoInfer<
+      Provides & MergeRequires<ValidatedContext<Schema>, unknown, MiddlewareRequires> & ContextRequires
+    > &
+      HandlerRequires
+  >;
   schemaTransform?: SchemaTransform;
 }
 
@@ -86,248 +134,288 @@ export interface ValidationErrorContext {
 
 export type SchemaTransform = (spec: RouteSchema) => RouteSchema;
 
-export interface TypeBoxGroupOptions {
+export interface TypeBoxOptions {
   deserializeRequest?: {
     contentType: string;
-    deserialize: (body?: RequestBody) => unknown;
+    deserialize: (request?: Request) => unknown;
   };
   serializeResponse?: {
     contentType: string;
-    serialize: (response: unknown) => ResponseBody;
+    serialize: (response: Response) => Promise<globalThis.Response> | globalThis.Response;
   };
   onInvalidRequest?: (
     request: RouteContext & ValidationErrorContext
-  ) => Promise<RawResponse> | RawResponse;
-  openapi?: {
-    info?: InfoObject;
-    components?: ComponentsObject;
-    servers?: ServerObject[];
-    externalDocs?: ExternalDocumentationObject;
-    security?: SecurityRequirementObject[];
-    tags?: TagObject[];
-    webhooks?: PathsObject;
-    schemaTransform?: SchemaTransform;
-  };
+  ) => Promise<globalThis.Response> | globalThis.Response;
+  schemaTransform?: SchemaTransform;
   aot?: boolean;
 }
 
-export function typebox<Context>(
-  routerGroup: RouterGroup<Context>,
-  options?: TypeBoxGroupOptions
-): TypeBoxGroup<Context> {
-  return new TypeBoxGroup(routerGroup, options);
+export interface OpenApiOptions {
+  info?: InfoObject;
+  components?: ComponentsObject;
+  servers?: ServerObject[];
+  externalDocs?: ExternalDocumentationObject;
+  security?: SecurityRequirementObject[];
+  tags?: TagObject[];
+  webhooks?: PathsObject;
+  schemaTransform?: SchemaTransform;
 }
 
-export class TypeBoxGroup<Context = unknown> implements RouterGroup<Context> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private parent?: TypeBoxGroup<any>;
-  private readonly builder: OpenApiBuilder | undefined;
-  private readonly schemaTransform: SchemaTransform;
-  private readonly aot: boolean;
+export interface SchemaMetadata {
+  schema: RouteSchema;
+  requestContentType: string;
+  responseContentType: string;
+}
 
-  private readonly onInvalidRequest: (
-    request: RouteContext & ValidationErrorContext
-  ) => Promise<RawResponse> | RawResponse;
+export interface ValidatedHandler<Requires = unknown> extends RouteHandler<Requires> {
+  metadata: SchemaMetadata;
+  configure: (options: TypeBoxOptions) => ValidatedHandler<Requires>;
+}
 
-  private readonly serializeResponse: {
-    contentType: string;
-    serialize: (response: unknown) => ResponseBody;
-  };
+function isValidatedHandler(handler: RouteHandler): handler is ValidatedHandler {
+  return 'metadata' in handler;
+}
 
-  private readonly deserializeRequest: {
-    contentType: string;
-    deserialize: (body?: RequestBody) => unknown;
-  };
+const defaultDeserializeRequest = {
+  contentType: 'application/json',
+  deserialize: (request?: Request) => request?.json(),
+};
 
-  constructor(
-    private readonly routerGroup: RouterGroup<Context>,
-    options?: TypeBoxGroupOptions
-  ) {
-    this.onInvalidRequest = options?.onInvalidRequest ?? (() => ({ status: 400 }));
-    this.serializeResponse = options?.serializeResponse ?? {
-      contentType: 'application/json',
-      serialize: (body: unknown) => writeJson(body),
-    };
-    this.deserializeRequest = options?.deserializeRequest ?? {
-      contentType: 'application/json',
-      deserialize: (body?: RequestBody) => body && readJson(body),
-    };
-    if (options?.openapi) {
-      this.builder = new OpenApiBuilder({
-        openapi: '3.1.0',
-        info: options.openapi.info ?? { title: 'API', version: '1.0.0' },
-        servers: options.openapi.servers,
-        components: options.openapi.components,
-        externalDocs: options.openapi.externalDocs,
-        security: options.openapi.security,
-        tags: options.openapi.tags,
-        webhooks: options.openapi.webhooks,
-      });
-    }
-    this.schemaTransform = options?.openapi?.schemaTransform ?? ((spec) => spec);
-    this.aot = options?.aot ?? true;
-  }
+const defaultSerializeResponse = {
+  contentType: 'application/json',
+  serialize: (response: Response) => json(response),
+};
 
-  route<NewContext>(options: RouteOptions<Context, NewContext> & { schema?: RouteSchema }): Route {
-    const route = this.routerGroup.route(options);
-    if (options.schema) {
-      if (route.method) {
-        this.registerSchema(route.method, route.path, options.schema);
-      } else {
-        for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) {
-          this.registerSchema(method, route.path, options.schema);
-        }
-      }
-    }
-    return route;
-  }
+const defaultOnInvalidRequest = (): globalThis.Response =>
+  new globalThis.Response(null, { status: 400 });
 
-  group<NewContext>(
-    options: GroupOptions<NewContext> & { schemaTransform?: SchemaTransform }
-  ): TypeBoxGroup<Context & NewContext> {
-    const group = new TypeBoxGroup(this.routerGroup.group(options), {
-      deserializeRequest: this.deserializeRequest,
-      serializeResponse: this.serializeResponse,
-      onInvalidRequest: this.onInvalidRequest,
-      openapi: this.builder && {
-        components: this.builder.getSpec().components,
-        info: this.builder.getSpec().info,
-        servers: this.builder.getSpec().servers,
-        externalDocs: this.builder.getSpec().externalDocs,
-        security: this.builder.getSpec().security,
-        tags: this.builder.getSpec().tags,
-        webhooks: this.builder.getSpec().webhooks,
-        schemaTransform: options.schemaTransform
-          ? (spec) => options.schemaTransform!(this.schemaTransform(spec))
-          : this.schemaTransform,
-      },
-      aot: this.aot,
-    });
-    group.parent = this;
-    return group;
-  }
+export function validated<
+  Schema extends RouteSchema,
+  HandlerRequires = unknown,
+  Provides = unknown,
+  MiddlewareRequires = unknown,
+  ContextRequires = unknown,
+>(
+  options: ValidatedRouteOptions<
+    Schema,
+    HandlerRequires,
+    Provides,
+    MiddlewareRequires,
+    ContextRequires
+  >,
+  typeboxOptions?: TypeBoxOptions
+): RouteOptions<
+  HandlerRequires &
+    MergeRequires<
+      NoInfer<ValidatedContext<Schema>>,
+      unknown,
+      NoInfer<MiddlewareRequires>
+    >,
+  unknown,
+  unknown,
+  ContextRequires
+> {
+  let initialSchema: RouteSchema = options.schema;
+  if (options.schemaTransform) initialSchema = options.schemaTransform(initialSchema);
+  if (typeboxOptions?.schemaTransform) initialSchema = typeboxOptions.schemaTransform(initialSchema);
 
-  validatedRoute<NewContext, Schema extends RouteSchema>(
-    options: ValidatedRouteOptions<Context, NewContext, Schema>
-  ): Route {
-    return this.route(this.validated(options));
-  }
+  type InferredHandlerRequires = HandlerRequires &
+    MergeRequires<
+      NoInfer<ValidatedContext<Schema>>,
+      unknown,
+      NoInfer<MiddlewareRequires>
+    >;
 
-  validated<NewContext, Schema extends RouteSchema>(
-    options: ValidatedRouteOptions<Context, NewContext, Schema>
-  ): RouteOptions<Context, ValidatedContext<Schema> & NewContext> & { schema: RouteSchema } {
-    const validationMiddleware = validation(options.schema, this.onInvalidRequest, this.aot);
+  function createHandler(
+    currentOptions: TypeBoxOptions | undefined,
+    currentSchema: RouteSchema
+  ): ValidatedHandler<InferredHandlerRequires> {
+    const deserializeRequest = currentOptions?.deserializeRequest ?? defaultDeserializeRequest;
+    const serializeResponse = currentOptions?.serializeResponse ?? defaultSerializeResponse;
+    const onInvalidRequest = currentOptions?.onInvalidRequest ?? defaultOnInvalidRequest;
+    const aot = currentOptions?.aot ?? true;
 
     const contentTypeMiddleware = contentType({
-      contentType: this.deserializeRequest.contentType,
-      deserializeRequest: (body) => this.deserializeRequest.deserialize(body),
+      contentType: deserializeRequest.contentType,
+      deserializeRequest: (request) => deserializeRequest.deserialize(request),
       allowNoContent: true,
-      onInvalidContentType: async () => ({ status: 415 }),
+      onInvalidContentType: () => new globalThis.Response(null, { status: 415 }),
     });
 
-    let schema: RouteSchema = options.schema;
-    if (options.schemaTransform) schema = options.schemaTransform(schema);
-    schema = this.schemaTransform(schema);
+    const validationMiddleware = validation(options.schema, onInvalidRequest, aot);
+    const baseMiddleware = contentTypeMiddleware.pipe(validationMiddleware);
+    const fullMiddleware = options.middleware
+      ? baseMiddleware.pipe(options.middleware as unknown as Middleware)
+      : baseMiddleware;
 
-    return {
-      method: options.method,
-      path: options.path,
-      middleware: options.middleware
-        ? pipe(contentTypeMiddleware, validationMiddleware, options.middleware)
-        : (pipe(contentTypeMiddleware, validationMiddleware) as Middleware<
-            ValidatedContext<Schema> & NewContext
-          >),
-      handler: async (context) => {
-        const { status, body, headers: headersInit } = await options.handler(context);
-        const headers = new Headers(headersInit);
-        if (body === undefined) {
-          return { status, headers };
-        }
-        if (!headers.has('Content-Type')) {
-          headers.set('Content-Type', this.serializeResponse.contentType);
-        }
-        return { status, body: this.serializeResponse.serialize(body), headers };
-      },
-      schema,
+    const rawHandler: RouteHandler<ValidatedContext<Schema>> = async (context) => {
+      const {
+        status,
+        body,
+        headers: headersInit,
+      } = await (options.handler as ValidatedRouteHandler<Schema>)(context);
+      const headers = new Headers(headersInit);
+      if (body === undefined) {
+        return new globalThis.Response(null, { status, headers });
+      }
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', serializeResponse.contentType);
+      }
+      return await serializeResponse.serialize({ status, body, headers });
     };
+
+    return Object.assign(
+      apply(fullMiddleware as Middleware, rawHandler) as RouteHandler<InferredHandlerRequires>,
+      {
+        metadata: {
+          schema: currentSchema,
+          requestContentType: deserializeRequest.contentType,
+          responseContentType: serializeResponse.contentType,
+        },
+        configure(pluginOptions: TypeBoxOptions): ValidatedHandler<InferredHandlerRequires> {
+          const nextSchema = pluginOptions.schemaTransform
+            ? pluginOptions.schemaTransform(this.metadata.schema)
+            : this.metadata.schema;
+          const mergedOptions: TypeBoxOptions = { ...pluginOptions, ...currentOptions };
+          return createHandler(mergedOptions, nextSchema);
+        },
+      }
+    );
   }
 
-  registerSchema(method: string, path: string, schema: RouteSchema): void {
-    if (!this.builder) return;
+  return {
+    method: options.method,
+    path: options.path,
+    handler: createHandler(typeboxOptions, initialSchema),
+  };
+}
 
-    path = path.replace(/:(\w+)/g, '{$1}');
-    method = method.toLowerCase();
-    schema = this.schemaTransform(schema);
-    const spec: PathItemObject = {
-      [method]: {
-        ...(schema.body &&
-          !TypeGuard.IsUndefined(schema.body) && {
-            requestBody: {
-              description: schema.body.description,
-              content: {
-                [this.deserializeRequest.contentType]: {
-                  schema: schema.body,
-                },
-              },
-            },
-          }),
-        parameters: [
-          ...Object.entries(schema.params ?? {}).map(([name, schema]) => ({
-            name,
-            in: 'path',
-            schema,
-            required: !TypeGuard.IsOptional(schema),
-            description: schema.description,
-          })),
-          ...Object.entries(schema.query ?? {}).map(([name, schema]) => ({
-            name,
-            in: 'query',
-            schema,
-            required: !TypeGuard.IsOptional(schema),
-            description: schema.description,
-          })),
-        ],
-        responses: mapValues(schema.response, (schema) => ({
-          description: schema.description ?? '',
-          ...(!TypeGuard.IsUndefined(schema) &&
-            !TypeGuard.IsNever(schema) && {
-              content: {
-                [this.serializeResponse.contentType]: {
-                  schema,
-                },
-              },
-            }),
-        })),
-      },
-    };
-    this.builder.addPath(path, spec);
-    if (this.parent) this.parent.registerSchema(method, path, schema);
-  }
-
-  openapi(): OpenAPIObject {
-    if (!this.builder) {
-      throw new Error(
-        'OpenAPI builder not initialized, specify openapi settings in group options to use this function'
-      );
+export function typebox<Requires = unknown>(
+  options: TypeBoxOptions
+): Plugin<Requires, Requires> {
+  function visit(node: RouteNode): void {
+    for (const [method, handler] of Object.entries(node.methods)) {
+      if (isValidatedHandler(handler)) {
+        node.methods[method] = handler.configure(options);
+      }
     }
-    return this.builder.getSpec();
+    for (const child of Object.values(node.children)) {
+      visit(child);
+    }
   }
+
+  return (node: RouteNode<Requires>): RouteNode<Requires> => {
+    visit(node as RouteNode);
+    return node;
+  };
+}
+
+export function schemaTransform<Requires = unknown>(
+  transform: SchemaTransform
+): Plugin<Requires, Requires> {
+  return typebox({ schemaTransform: transform });
+}
+
+export function openapi(node: RouteNode | NodeBuilder, options?: OpenApiOptions): OpenAPIObject {
+  const rootNode = 'build' in node ? node.build() : node;
+  const builder = new OpenApiBuilder({
+    openapi: '3.1.0',
+    info: options?.info ?? { title: 'API', version: '1.0.0' },
+    servers: options?.servers,
+    components: options?.components,
+    externalDocs: options?.externalDocs,
+    security: options?.security,
+    tags: options?.tags,
+    webhooks: options?.webhooks,
+  });
+
+  const globalTransform = options?.schemaTransform ?? ((spec: RouteSchema) => spec);
+
+  function visit(currentNode: RouteNode, currentPath: string): void {
+    const openApiPath = (currentPath || '/').replace(/:([a-zA-Z0-9_]+)\*?/g, '{$1}');
+
+    for (const [rawMethod, handler] of Object.entries(currentNode.methods)) {
+      if (!isValidatedHandler(handler)) continue;
+      const { metadata } = handler;
+
+      const schema = globalTransform(metadata.schema);
+      const methods =
+        rawMethod === ALL_METHODS
+          ? ['get', 'post', 'put', 'delete', 'patch']
+          : [rawMethod.toLowerCase()];
+
+      for (const method of methods) {
+        const spec: PathItemObject = {
+          [method]: {
+            description: schema.description,
+            summary: schema.summary,
+            tags: schema.tags,
+            security: schema.security?.map((s) => ({ [s]: [] })),
+            ...(schema.body &&
+              !TypeGuard.IsUndefined(schema.body) && {
+                requestBody: {
+                  description: schema.body.description,
+                  content: {
+                    [metadata.requestContentType]: {
+                      schema: schema.body,
+                    },
+                  },
+                },
+              }),
+            parameters: [
+              ...Object.entries(schema.params ?? {}).map(([name, paramSchema]) => ({
+                name,
+                in: 'path' as const,
+                schema: paramSchema,
+                required: !TypeGuard.IsOptional(paramSchema),
+                description: paramSchema.description,
+              })),
+              ...Object.entries(schema.query ?? {}).map(([name, querySchema]) => ({
+                name,
+                in: 'query' as const,
+                schema: querySchema,
+                required: !TypeGuard.IsOptional(querySchema),
+                description: querySchema.description,
+              })),
+            ],
+            responses: mapValues(schema.response, (resSchema) => ({
+              description: resSchema.description ?? '',
+              ...(!TypeGuard.IsUndefined(resSchema) &&
+                !TypeGuard.IsNever(resSchema) && {
+                  content: {
+                    [metadata.responseContentType]: {
+                      schema: resSchema,
+                    },
+                  },
+                }),
+            })),
+          },
+        };
+        builder.addPath(openApiPath, spec);
+      }
+    }
+
+    for (const [segment, child] of Object.entries(currentNode.children)) {
+      visit(child, `${currentPath}/${segment}`);
+    }
+  }
+
+  visit(rootNode, '');
+  return builder.getSpec();
 }
 
 export function validation<Schema extends RouteSchema>(
   schema: Schema,
   onInvalidRequest: (
     request: RouteContext & ValidationErrorContext
-  ) => Promise<RawResponse> | RawResponse = () => ({ status: 400 }),
+  ) => Promise<globalThis.Response> | globalThis.Response = defaultOnInvalidRequest,
   aot = true
-): Middleware<ValidatedContext<Schema>> {
+): MiddlewareWrapper<ValidatedContext<Schema>, { body: unknown }> {
   const bodyValidator = schema.body && compile(schema.body, aot);
   const queryValidator = schema.query && compile(Type.Object(schema.query), aot);
   const paramsValidator = schema.params && compile(Type.Object(schema.params), aot);
 
-  return async (next, context) => {
-    if (!('body' in context)) throw new Error('should not happen');
-
+  return middleware(async (next, context) => {
     const errors: ValueError[] = [];
 
     let body = context.body;
@@ -365,11 +453,12 @@ export function validation<Schema extends RouteSchema>(
     }
 
     return await next({
+      ...context,
       body: bodyValidator?.Decode(body),
       params: paramsValidator?.Decode(params) ?? {},
       query: queryValidator?.Decode(query) ?? {},
-    } as ValidatedContext<Schema>);
-  };
+    } as RouteContext & ValidatedContext<Schema> & { body: unknown });
+  });
 }
 
 function compile(

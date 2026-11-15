@@ -1,5 +1,5 @@
-import type { GroupOptions, Route, RouteOptions, RouterGroup } from '@glass-cannon/router';
-import { pipe, type Middleware } from '@glass-cannon/router/middleware';
+import type { Plugin, RouteHandler, RouteNode } from '@glass-cannon/router';
+import { middleware, pipe, type Middleware } from '@glass-cannon/router/middleware';
 
 export interface CorsOptions {
   allowOrigin: (origin: string) => boolean;
@@ -10,113 +10,83 @@ export interface CorsOptions {
   maxAge?: number;
 }
 
-export function cors<Context>(
-  group: RouterGroup<Context>,
-  options: CorsOptions
-): CorsGroup<Context> {
-  return new CorsGroup(group, options);
-}
+export function cors<Requires = unknown>(options: CorsOptions): Plugin<Requires, Requires> {
+  const allowOrigin = options.allowOrigin;
+  const allowMethods = options.allowMethods ?? ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'PATCH'];
+  const allowHeaders = options.allowHeaders ?? [];
+  const exposeHeaders = options.exposeHeaders ?? [];
+  const allowCredentials = options.allowCredentials ?? false;
+  const maxAge = options.maxAge;
 
-export class CorsGroup<Context = unknown> implements RouterGroup<Context> {
-  private readonly allowOrigin: (origin: string) => boolean;
-  private readonly allowMethods: string[];
-  private readonly allowHeaders: string[];
-  private readonly exposeHeaders: string[];
-  private readonly allowCredentials: boolean;
-  private readonly maxAge?: number;
+  const corsMiddleware = middleware(async (next, context) => {
+    const response = await next(context);
 
-  constructor(
-    private readonly routerGroup: RouterGroup<Context>,
-    options: CorsOptions
-  ) {
-    this.allowOrigin = options.allowOrigin;
-    this.allowMethods = options.allowMethods ?? ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'PATCH'];
-    this.allowHeaders = options.allowHeaders ?? [];
-    this.exposeHeaders = options.exposeHeaders ?? [];
-    this.allowCredentials = options.allowCredentials ?? false;
-    this.maxAge = options.maxAge;
-  }
-
-  route<NewContext>(options: RouteOptions<Context, NewContext>): Route {
-    const middleware = options.middleware
-      ? pipe(this.middleware, options.middleware)
-      : (this.middleware as Middleware<NewContext>);
-    this.routerGroup.route(this.preflight(options));
-    return this.routerGroup.route({ ...options, middleware });
-  }
-
-  group<NewContext>(options: GroupOptions<NewContext>): CorsGroup<Context & NewContext> {
-    const group = this.routerGroup.group(options);
-    return new CorsGroup(group, {
-      allowOrigin: this.allowOrigin,
-      allowMethods: this.allowMethods,
-      allowHeaders: this.allowHeaders,
-      exposeHeaders: this.exposeHeaders,
-      allowCredentials: this.allowCredentials,
-      maxAge: this.maxAge,
-    });
-  }
-
-  middleware: Middleware = async (next, context) => {
-    let { status, body, headers } = await next(context);
-
-    const origin = context.headers.get('Origin');
-    if (origin && this.allowOrigin(origin)) {
-      headers ??= new Headers();
+    const origin = context.request.headers.get('Origin');
+    if (origin && allowOrigin(origin)) {
+      const headers = new Headers(response.headers);
       headers.append('Vary', 'Origin');
       if (!headers.has('Access-Control-Allow-Origin')) {
         headers.set('Access-Control-Allow-Origin', origin);
       }
-      if (this.allowCredentials && !headers.has('Access-Control-Allow-Credentials')) {
+      if (allowCredentials && !headers.has('Access-Control-Allow-Credentials')) {
         headers.set('Access-Control-Allow-Credentials', 'true');
       }
-      if (this.exposeHeaders.length > 0 && !headers.has('Access-Control-Expose-Headers')) {
-        headers.set('Access-Control-Expose-Headers', this.exposeHeaders.join(', '));
+      if (exposeHeaders.length > 0 && !headers.has('Access-Control-Expose-Headers')) {
+        headers.set('Access-Control-Expose-Headers', exposeHeaders.join(', '));
       }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
     }
 
-    return { status, body, headers };
+    return response;
+  });
+
+  const preflightHandler: RouteHandler = (context) => {
+    const origin = context.request.headers.get('Origin');
+    if (!origin || !allowOrigin(origin)) {
+      return new Response(null, { status: 403 });
+    }
+
+    const headers = new Headers();
+    headers.append('Vary', 'Origin');
+    headers.set('Access-Control-Allow-Origin', origin);
+
+    if (allowCredentials) {
+      headers.set('Access-Control-Allow-Credentials', 'true');
+    }
+    if (exposeHeaders.length > 0) {
+      headers.set('Access-Control-Expose-Headers', exposeHeaders.join(', '));
+    }
+    if (maxAge !== undefined) {
+      headers.set('Access-Control-Max-Age', maxAge.toString());
+    }
+    if (allowMethods.length > 0) {
+      headers.set('Access-Control-Allow-Methods', allowMethods.join(', '));
+    }
+    if (allowHeaders.length > 0) {
+      headers.set('Access-Control-Allow-Headers', allowHeaders.join(', '));
+    }
+
+    return new Response(null, { status: 204, headers });
   };
 
-  preflight<NewContext>(options: RouteOptions<Context, NewContext>): RouteOptions<Context> {
-    return {
-      method: 'OPTIONS',
-      path: options.path,
-      handler: async (context) => {
-        const origin = context.headers.get('Origin');
-
-        if (!origin || !this.allowOrigin(origin)) return { status: 403 };
-
-        const headers = new Headers();
-
-        headers.append('Vary', 'Origin');
-
-        if (!headers.has('Access-Control-Allow-Origin')) {
-          headers.set('Access-Control-Allow-Origin', origin);
-        }
-
-        if (this.allowCredentials && !headers.has('Access-Control-Allow-Credentials')) {
-          headers.set('Access-Control-Allow-Credentials', 'true');
-        }
-
-        if (this.exposeHeaders.length > 0 && !headers.has('Access-Control-Expose-Headers')) {
-          headers.set('Access-Control-Expose-Headers', this.exposeHeaders.join(', '));
-        }
-
-        if (this.maxAge !== undefined && !headers.has('Access-Control-Max-Age')) {
-          headers.set('Access-Control-Max-Age', this.maxAge.toString());
-        }
-
-        if (this.allowMethods.length > 0 && !headers.has('Access-Control-Allow-Methods')) {
-          headers.set('Access-Control-Allow-Methods', this.allowMethods.join(', '));
-        }
-
-        if (this.allowHeaders.length > 0 && !headers.has('Access-Control-Allow-Headers')) {
-          headers.set('Access-Control-Allow-Headers', this.allowHeaders.join(', '));
-        }
-
-        return { status: 204, headers };
-      },
-    };
+  function addPreflightRoutes(node: RouteNode): void {
+    if (Object.keys(node.methods).length > 0 && !node.methods.OPTIONS) {
+      node.methods.OPTIONS = preflightHandler;
+    }
+    for (const child of Object.values(node.children)) {
+      addPreflightRoutes(child);
+    }
   }
+
+  return (node: RouteNode<Requires>): RouteNode<Requires> => {
+    node.middleware = (node.middleware
+      ? pipe(corsMiddleware as Middleware, node.middleware as Middleware)
+      : corsMiddleware) as unknown as Middleware<unknown, Requires>;
+    addPreflightRoutes(node as RouteNode);
+    return node;
+  };
 }
