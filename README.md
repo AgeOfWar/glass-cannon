@@ -146,10 +146,10 @@ const usersRoutes = route<{ userId: string }>({
 });
 
 // Mount usersRoutes under '/users' with authMiddleware satisfying { userId: string }
-const api = routes().group(
-  { prefix: '/users', middleware: authMiddleware },
-  usersRoutes
-);
+const api = routes().group({ prefix: '/users', middleware: authMiddleware }, usersRoutes);
+
+// Alternatively, pass group options directly to routes()
+const usersApi = routes({ prefix: '/users', middleware: authMiddleware }).use(usersRoutes);
 
 const router = Router.from(api);
 ```
