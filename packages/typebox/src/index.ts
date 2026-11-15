@@ -290,9 +290,7 @@ export function validated<
   };
 }
 
-export function typebox<Requires = unknown>(
-  options: TypeBoxOptions
-): Plugin<Requires, Requires> {
+export function typebox(options: TypeBoxOptions): Plugin {
   function visit(node: RouteNode): void {
     for (const [method, handler] of Object.entries(node.methods)) {
       if (isValidatedHandler(handler)) {
@@ -304,20 +302,21 @@ export function typebox<Requires = unknown>(
     }
   }
 
-  return (node: RouteNode<Requires>): RouteNode<Requires> => {
-    visit(node as RouteNode);
+  return (node: RouteNode): RouteNode => {
+    visit(node);
     return node;
   };
 }
 
-export function schemaTransform<Requires = unknown>(
-  transform: SchemaTransform
-): Plugin<Requires, Requires> {
+export function schemaTransform(transform: SchemaTransform): Plugin {
   return typebox({ schemaTransform: transform });
 }
 
-export function openapi(node: RouteNode | NodeBuilder, options?: OpenApiOptions): OpenAPIObject {
-  const rootNode = 'build' in node ? node.build() : node;
+export function openapi<Requires = unknown, Provides = unknown>(
+  node: RouteNode<Requires> | NodeBuilder<Requires, Provides>,
+  options?: OpenApiOptions
+): OpenAPIObject {
+  const rootNode = ('build' in node ? node.build() : node) as RouteNode;
   const builder = new OpenApiBuilder({
     openapi: '3.1.0',
     info: options?.info ?? { title: 'API', version: '1.0.0' },

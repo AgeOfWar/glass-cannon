@@ -23,23 +23,30 @@ const roleMiddleware = middleware<{ role: 'admin' | 'user' }>(async (next, conte
   return await next({ ...context, role: isAdmin ? 'admin' : 'user' });
 });
 
-const usersRoutes = route<{ userId: string }>(
-  validated({
-    method: 'GET',
-    path: '/me',
-    schema: {
-      summary: 'Get current user',
-      response: {
-        200: Type.Object({
-          userId: Type.String(),
-        }),
+const usersRoutes = routes<{ userId: string }>()
+  .apply(
+    schemaTransform((schema) => ({
+      ...schema,
+      tags: [...(schema.tags ?? []), 'Users'],
+    }))
+  )
+  .route(
+    validated({
+      method: 'GET',
+      path: '/me',
+      schema: {
+        summary: 'Get current user',
+        response: {
+          200: Type.Object({
+            userId: Type.String(),
+          }),
+        },
       },
-    },
-    handler({ userId }) {
-      return { status: 200, body: { userId } };
-    },
-  })
-)
+      handler({ userId }) {
+        return { status: 200, body: { userId } };
+      },
+    })
+  )
   .route(
     validated({
       method: 'POST',
@@ -71,12 +78,6 @@ const usersRoutes = route<{ userId: string }>(
         };
       },
     })
-  )
-  .apply(
-    schemaTransform((schema) => ({
-      ...schema,
-      tags: [...(schema.tags ?? []), 'Users'],
-    }))
   );
 
 const v1Routes = route(
@@ -101,28 +102,27 @@ const v1Routes = route(
 ).group({ prefix: '/users', middleware: authMiddleware }, usersRoutes);
 
 const api = routes()
-  .group({ prefix: '/v1', middleware: logMiddleware }, v1Routes)
+  .apply(
+    cors({
+      allowOrigin: () => true,
+    })
+  )
   .apply(
     typebox({
       onInvalidRequest: ({ errors }) => json({ status: 400, body: { errors } }),
     })
-  );
+  )
+  .group({ prefix: '/v1', middleware: logMiddleware }, v1Routes);
 
 const openApiSpec = openapi(api, {
   info: { title: 'Example API', version: '2.0.0' },
 });
 
-api
-  .route({
-    method: 'GET',
-    path: '/openapi.json',
-    handler: () => json({ status: 200, body: openApiSpec }),
-  })
-  .apply(
-    cors({
-      allowOrigin: () => true,
-    })
-  );
+api.route({
+  method: 'GET',
+  path: '/openapi.json',
+  handler: () => json({ status: 200, body: openApiSpec }),
+});
 
 const router = Router.from(api);
 

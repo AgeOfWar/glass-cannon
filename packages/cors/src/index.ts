@@ -1,5 +1,5 @@
 import type { Plugin, RouteHandler, RouteNode } from '@glass-cannon/router';
-import { middleware, pipe, type Middleware } from '@glass-cannon/router/middleware';
+import { middleware, pipe } from '@glass-cannon/router/middleware';
 
 export interface CorsOptions {
   allowOrigin: (origin: string) => boolean;
@@ -10,7 +10,7 @@ export interface CorsOptions {
   maxAge?: number;
 }
 
-export function cors<Requires = unknown>(options: CorsOptions): Plugin<Requires, Requires> {
+export function cors(options: CorsOptions): Plugin {
   const allowOrigin = options.allowOrigin;
   const allowMethods = options.allowMethods ?? ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'PATCH'];
   const allowHeaders = options.allowHeaders ?? [];
@@ -82,11 +82,9 @@ export function cors<Requires = unknown>(options: CorsOptions): Plugin<Requires,
     }
   }
 
-  return (node: RouteNode<Requires>): RouteNode<Requires> => {
-    node.middleware = (node.middleware
-      ? pipe(corsMiddleware as Middleware, node.middleware as Middleware)
-      : corsMiddleware) as unknown as Middleware<unknown, Requires>;
-    addPreflightRoutes(node as RouteNode);
+  return (node: RouteNode): RouteNode => {
+    node.middleware = node.middleware ? pipe(corsMiddleware, node.middleware) : corsMiddleware;
+    addPreflightRoutes(node);
     return node;
   };
 }

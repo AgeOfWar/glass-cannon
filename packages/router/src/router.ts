@@ -28,7 +28,10 @@ export class Router {
     private readonly fallback: Handler
   ) {}
 
-  static from(node: RouteNode | NodeBuilder, options?: RouterOptions): Router {
+  static from<Provides = unknown>(
+    node: RouteNode | NodeBuilder<unknown, Provides>,
+    options?: RouterOptions
+  ): Router {
     const rootNode = 'build' in node ? node.build() : node;
     const routes = compileRouteNode(rootNode);
     const fallback = options?.fallback ?? (() => new Response(null, { status: 404 }));

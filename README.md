@@ -1,26 +1,27 @@
 # Glass Cannon
 
-Glass Cannon is a modular TypeScript framework designed for building high-performance web servers. It provides a flexible architecture with support for routing, middleware, and server implementations for both Node.js and Bun runtimes.
+Glass Cannon is a modular TypeScript framework designed for building high-performance web servers. Built on standard Web `Request` and `Response` APIs, it provides a declarative, type-safe routing and middleware architecture with server implementations for both Node.js and Bun runtimes.
 
 ## Features
 
+- **Standard Web APIs**: Built around native `Request` and `Response` objects.
 - **Modular Design**: Each package is self-contained and can be used independently.
-- **Routing**: Powerful routing capabilities with support for middleware and nested groups.
-- **Middleware**: Compose middleware using a type-safe functional pipeline.
-- **Type Safety**: Leverages TypeScript for type-safe APIs and schemas.
+- **Declarative Routing**: Compose routes, nested groups, and plugins with `routes()`, `route()`, and `Router.from()`.
+- **End-to-End Type Safety**: Context requirements (`Requires`) propagate through routes, middlewares, and groups at compile time.
+- **Composable Middleware**: Build and chain middlewares using `middleware()` and `pipe()`.
+- **Validation & OpenAPI**: Built-in request/response validation and OpenAPI 3.1 generation using TypeBox schemas.
 - **Runtime Support**: Compatible with both Node.js and Bun runtimes.
-- **Validation**: Built-in support for request validation using TypeBox schemas.
 
 ## Packages
 
 This project is organized as a monorepo with the following packages:
 
-- **[@glass-cannon/server](packages/server)**: Core server utilities and abstractions.
+- **[@glass-cannon/server](packages/server)**: Core server interfaces and response helpers (`json`, `text`, `html`).
 - **[@glass-cannon/server-node](packages/server-node)**: Node.js server implementation.
 - **[@glass-cannon/server-bun](packages/server-bun)**: Bun server implementation.
-- **[@glass-cannon/router](packages/router)**: Routing and middleware utilities.
-- **[@glass-cannon/typebox](packages/typebox)**: TypeBox integration for request validation.
-- **[@glass-cannon/cors](packages/cors)**: CORS policies for your APIs.
+- **[@glass-cannon/router](packages/router)**: Declarative routing, groups, plugins, and middleware utilities.
+- **[@glass-cannon/typebox](packages/typebox)**: TypeBox integration for validation and OpenAPI 3.1 schema generation.
+- **[@glass-cannon/cors](packages/cors)**: CORS plugin for routes and groups.
 
 ## Getting Started
 
@@ -39,45 +40,49 @@ bun install @glass-cannon/server-bun @glass-cannon/router
 ## Example
 
 ```typescript
+import { route, Router } from '@glass-cannon/router';
 import { NodeServer, text } from '@glass-cannon/server-node';
-import { Router } from '@glass-cannon/router';
-
-// Create a new router instance to define HTTP routes
-const router = new Router();
 
 // Define a GET route for the root path ('/')
-router.route({
+const api = route({
   method: 'GET',
   path: '/',
   handler() {
-    // Return a plain text response with status 200
+    // Return a plain text Response with status 200
     return text({ status: 200, body: 'Hello World!' });
   },
 });
+
+// Compile the route tree into a Router instance
+const router = Router.from(api);
 
 // Create an HTTP server using the router's handler
 const server = new NodeServer(router.handle);
 
 // Start the server on 127.0.0.1:3000
 const runningServer = await server.listen({ host: '127.0.0.1', port: 3000 });
-console.log(`Server is running on ${runningServer.url}`);
+console.log(`Server is running on ${runningServer.url.href}`);
 ```
 
 ## Middleware
 
-Glass Cannon allows you to use middleware to handle authentication before processing requests. Here's an example of implementing an authentication middleware:
+Glass Cannon allows you to define type-safe middlewares that inspect requests, short-circuit responses, or enrich the route context:
 
 ```typescript
-const authenticate: Middleware<{ role: string }> = (next, context) => {
-  const authorization = context.headers.get('Authorization');
+import { route, Router } from '@glass-cannon/router';
+import { middleware } from '@glass-cannon/router/middleware';
+import { text } from '@glass-cannon/server';
+
+const authenticate = middleware<{ role: string }>(async (next, context) => {
+  const authorization = context.request.headers.get('Authorization');
   if (!authorization) {
-    return { status: 401 };
+    return new Response(null, { status: 401 });
   }
   const role = obtainRoleFromToken(authorization);
-  return next({ role });
-};
+  return await next({ ...context, role });
+});
 
-router.route({
+const api = route({
   method: 'GET',
   path: '/role',
   middleware: authenticate,
@@ -85,130 +90,153 @@ router.route({
     return text({ status: 200, body: `Your role is ${role}` });
   },
 });
+
+const router = Router.from(api);
 ```
 
 ### Pipe middleware
 
-You can combine multiple middleware functions using the `pipe` utility. Here's an example that combines a logging middleware with an authentication middleware:
+You can combine multiple middlewares using `pipe` (or the `.pipe()` method on a middleware created with `middleware()`):
 
 ```typescript
-// Authentication middleware
-const authenticate: Middleware<{ role: string }> = /*...*/
+import { route } from '@glass-cannon/router';
+import { middleware, pipe } from '@glass-cannon/router/middleware';
+import { text } from '@glass-cannon/server';
 
-// Logging middleware
-const log: Middleware = (next, context) => {
-  console.log('New request:', context);
-  return next(context);
-};
+const authenticate = middleware<{ role: string }>(/* ... */);
 
-router.route({
+const log = middleware(async (next, context) => {
+  console.log(`${context.method} ${context.url.pathname}`);
+  return await next(context);
+});
+
+const api = route({
   method: 'GET',
   path: '/role',
   // log middleware is executed first, then authenticate
-  middleware: pipe(log, authenticate),
+  middleware: pipe(log, authenticate), // or log.pipe(authenticate)
   handler({ role }) {
     return text({ status: 200, body: `Your role is ${role}` });
   },
 });
 ```
 
-## Groups
+## Groups & Context Requirements
 
-Glass Cannon provides a powerful way to organize routes and middleware using groups. Groups allow you to define a common prefix and shared middleware for a set of related routes, simplifying the management of complex APIs.
+Groups allow you to mount a sub-tree of routes under a shared prefix and middleware. Child routes can declare context requirements (such as `{ userId: string }`), which are enforced by TypeScript until satisfied by an enclosing group's middleware:
 
 ```typescript
-import { json, NodeServer } from '@glass-cannon/server-node';
-import { Router } from '@glass-cannon/router';
-import { jsonBody, pipe } from '@glass-cannon/router/middleware';
+import { route, Router, routes } from '@glass-cannon/router';
+import { middleware } from '@glass-cannon/router/middleware';
+import { json } from '@glass-cannon/server';
 
-const router = new Router();
-
-// Create a group with a prefix and shared middleware
-const v1 = router.group({
-  prefix: '/v1',
-  middleware: jsonBody(), // Parse JSON body for all routes in this group
+const authMiddleware = middleware<{ userId: string }>(async (next, context) => {
+  const token = context.request.headers.get('Authorization');
+  if (!token) return new Response(null, { status: 401 });
+  return await next({ ...context, userId: token });
 });
 
-// Define a route within the group
-v1.route({
+// Declare routes that require { userId: string } from an outer group
+const usersRoutes = route<{ userId: string }>({
   method: 'GET',
-  path: '/double',
-  // middleware order: jsonBody, log, authenticate
-  middleware: pipe(log, authenticate),
-  handler({ body }) {
-    if (!body) return json({ status: 400, body: 'Missing body' });
-    if (typeof body !== 'number') return json({ status: 400, body: 'Not a number' });
-    return json({ status: 200, body: { result: body * 2 } });
+  path: '/me',
+  handler({ userId }) {
+    return json({ status: 200, body: { userId } });
   },
 });
-```
 
-## TypeBox Integration
-
-Glass Cannon integrates seamlessly with [TypeBox](https://github.com/sinclairzx81/typebox) to provide runtime validation and type-safe schemas for your routes. This integration ensures that your API requests and responses adhere to defined schemas, improving reliability and developer experience.
-
-### Example: Validating Requests and Responses
-
-Here's an example of using TypeBox to validate the request body and response:
-
-```typescript
-import { Router } from '@glass-cannon/router';
-import { jsonBody } from '@glass-cannon/router/middleware';
-import { typebox } from '@glass-cannon/typebox';
-import { Type } from '@sinclair/typebox';
-
-// Create a router with JSON body parsing middleware
-const router = new Router({
-  middleware: jsonBody(),
-});
-
-// Wrap router group with TypeBox integration
-const v1 = typebox(
-  router.group({
-    prefix: '/v1',
-    middleware: jsonBody(),
-  })
+// Mount usersRoutes under '/users' with authMiddleware satisfying { userId: string }
+const api = routes().group(
+  { prefix: '/users', middleware: authMiddleware },
+  usersRoutes
 );
 
-// Define a validated route
-v1.validatedRoute({
-  schema: {
-    body: Type.Number(),
-    response: {
-      200: Type.Object({
-        result: Type.Number(),
-      }),
-    },
-  },
-  path: '/double',
-  // body type is inferred as number
-  handler: ({ body }) => {
-    // return a status code different from 200 results in an error, same for body
-    return { status: 200, body: { result: body * 2 } };
-  },
+const router = Router.from(api);
+```
+
+## TypeBox Integration & OpenAPI
+
+Glass Cannon integrates with [TypeBox](https://github.com/sinclairzx81/typebox) via `@glass-cannon/typebox` to validate `params`, `query`, `headers`, `body`, and `response` payloads, and to generate OpenAPI 3.1 specifications from your route tree.
+
+```typescript
+import { Router, routes } from '@glass-cannon/router';
+import { json } from '@glass-cannon/server';
+import { openapi, schemaTransform, typebox, validated } from '@glass-cannon/typebox';
+import { Type } from '@sinclair/typebox';
+
+const mathRoutes = routes()
+  .apply(
+    schemaTransform((schema) => ({
+      ...schema,
+      tags: [...(schema.tags ?? []), 'Math'],
+    }))
+  )
+  .route(
+    validated({
+      method: 'POST',
+      path: '/double',
+      schema: {
+        summary: 'Double a number',
+        body: Type.Object({
+          value: Type.Number(),
+        }),
+        response: {
+          200: Type.Object({
+            result: Type.Number(),
+          }),
+        },
+      },
+      // body is automatically validated and typed as { value: number }
+      handler({ body }) {
+        return { status: 200, body: { result: body.value * 2 } };
+      },
+    })
+  );
+
+const api = routes()
+  .apply(
+    typebox({
+      onInvalidRequest: ({ errors }) => json({ status: 400, body: { errors } }),
+    })
+  )
+  .group({ prefix: '/v1' }, mathRoutes);
+
+// Generate an OpenAPI 3.1 document from the route tree
+const openApiSpec = openapi(api, {
+  info: { title: 'My API', version: '1.0.0' },
 });
 
-// Could also be written as v1.route(v1.validated({ ... }))
+api.route({
+  method: 'GET',
+  path: '/openapi.json',
+  handler: () => json({ status: 200, body: openApiSpec }),
+});
+
+const router = Router.from(api);
 ```
 
 ## CORS
 
-Glass Cannon makes it easy to handle CORS (Cross-Origin Resource Sharing). This allows you to enable or configure CORS policies for your APIs in a simple and modular way.
-
-### Example: Enable CORS for all routes
-
-You can use the `cors` from the `@glass-cannon/cors` package to add CORS headers to HTTP responses:
+You can apply the `cors` plugin from `@glass-cannon/cors` before registering routes or groups using `.apply()`:
 
 ```typescript
 import { cors } from '@glass-cannon/cors';
+import { Router, routes } from '@glass-cannon/router';
+import { text } from '@glass-cannon/server';
 
-const group = cors(router, { allowOrigin: (origin) => origin === 'www.example.com' });
+const api = routes()
+  .apply(
+    cors({
+      allowOrigin: (origin) => origin === 'https://www.example.com',
+    })
+  )
+  .route({
+    method: 'GET',
+    path: '/',
+    handler() {
+      return text({ status: 200, body: 'CORS enabled!' });
+    },
+  });
 
-group.route({
-  method: 'GET',
-  path: '/',
-  handler() {
-    return { status: 200, body: 'CORS enabled!' };
-  },
-});
+const router = Router.from(api);
 ```

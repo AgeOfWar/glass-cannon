@@ -6,12 +6,12 @@
     ".": "./dist/index.ts"
   },
   "dependencies": {
-    "@glass-cannon/cors": "0.11.0",
-    "@glass-cannon/router": "0.11.0",
-    "@glass-cannon/server": "0.11.0",
-    "@glass-cannon/server-bun": "0.11.0",
-    "@glass-cannon/server-node": "0.11.0",
-    "@glass-cannon/typebox": "0.11.0"
+    "@glass-cannon/cors": "0.12.0",
+    "@glass-cannon/router": "0.12.0",
+    "@glass-cannon/server": "0.12.0",
+    "@glass-cannon/server-bun": "0.12.0",
+    "@glass-cannon/server-node": "0.12.0",
+    "@glass-cannon/typebox": "0.12.0"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -22,5 +22,5 @@
   "scripts": {
     "dev": "bun run ./src/index.ts"
   },
-  "version": "0.11.0"
+  "version": "0.12.0"
 }
