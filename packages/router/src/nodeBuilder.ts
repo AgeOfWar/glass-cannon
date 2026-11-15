@@ -27,6 +27,8 @@ interface BuilderSegment {
 export class NodeBuilder<Requires = unknown, Provides = unknown> {
   private segments: BuilderSegment[] = [{ plugins: [], node: { children: {}, methods: {} } }];
 
+  constructor(private readonly options?: GroupOptions<Provides, Requires>) {}
+
   route<HandlerRequires = unknown, RouteProvides = unknown, MiddlewareRequires = unknown>({
     method,
     path,
@@ -109,17 +111,11 @@ export class NodeBuilder<Requires = unknown, Provides = unknown> {
 
   apply<PluginProvides = unknown, PluginRequires = unknown>(
     plugin: Plugin<PluginProvides, PluginRequires>
-  ): NodeBuilder<
-    MergeRequires<Provides, Requires, PluginRequires>,
-    Provides & PluginProvides
-  >;
+  ): NodeBuilder<MergeRequires<Provides, Requires, PluginRequires>, Provides & PluginProvides>;
   apply(plugin: Plugin | undefined | null): NodeBuilder<Requires, Provides>;
   apply<PluginProvides = unknown, PluginRequires = unknown>(
     plugin: Plugin<PluginProvides, PluginRequires> | undefined | null
-  ): NodeBuilder<
-    MergeRequires<Provides, Requires, PluginRequires>,
-    Provides & PluginProvides
-  > {
+  ): NodeBuilder<MergeRequires<Provides, Requires, PluginRequires>, Provides & PluginProvides> {
     if (plugin) {
       const current = this.currentSegment();
       if (isNodeEmpty(current.node)) {
@@ -149,6 +145,17 @@ export class NodeBuilder<Requires = unknown, Provides = unknown> {
         transformed = segment.plugins[j]!(transformed);
       }
       acc = transformed;
+    }
+    if (this.options?.middleware) {
+      acc.middleware = acc.middleware
+        ? pipe(this.options.middleware as Middleware, acc.middleware)
+        : (this.options.middleware as Middleware);
+    }
+    if (this.options?.prefix) {
+      const root: RouteNode = { children: {}, methods: {} };
+      const target = this.getOrCreateNode(root, this.options.prefix);
+      this.merge(target, acc);
+      acc = root;
     }
     return acc as RouteNode<Requires>;
   }
@@ -213,10 +220,7 @@ function wrapHandler(middleware: Middleware, handler: RouteHandler): RouteHandle
     (wrapped as unknown as { configure: (options: unknown) => RouteHandler }).configure = (
       options: unknown
     ) =>
-      wrapHandler(
-        middleware,
-        (handler.configure as (options: unknown) => RouteHandler)(options)
-      );
+      wrapHandler(middleware, (handler.configure as (options: unknown) => RouteHandler)(options));
   }
   return wrapped;
 }
@@ -248,6 +252,11 @@ export function route<HandlerRequires = unknown, Provides = unknown, MiddlewareR
   >;
 }
 
-export function routes<Requires = unknown>(): NodeBuilder<Requires> {
-  return new NodeBuilder<Requires>();
+export function routes<Requires = unknown, Provides = unknown, MiddlewareRequires = unknown>(
+  options?: GroupOptions<Provides, MiddlewareRequires>
+): NodeBuilder<Requires & MiddlewareRequires, Provides> {
+  return new NodeBuilder(options) as unknown as NodeBuilder<
+    Requires & MiddlewareRequires,
+    Provides
+  >;
 }
