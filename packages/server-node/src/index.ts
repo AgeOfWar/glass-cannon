@@ -20,15 +20,27 @@ export class NodeServer implements Server {
 
   listen({ host = 'localhost', port = 0 }: ListenOptions): Promise<RunningServer> {
     return new Promise((resolve, reject) => {
+      let origin: string;
       const server = http.createServer({ joinDuplicateHeaders: true }, (request, response) => {
         void (async () => {
           try {
-            const req = this.toRequest(request, host);
-            const res = await this.handle(req);
+            let res: Response;
+            try {
+              const req = this.toRequest(request, origin);
+              res = await this.handle(req);
+            } catch (error) {
+              res = await this.errorHandler(error);
+            }
             await this.fromResponse(res, response);
           } catch (error) {
-            const res = await this.errorHandler(error);
-            await this.fromResponse(res, response);
+            // Either the error handler threw or the response could not be written
+            // (e.g. the client disconnected): nothing else can be sent.
+            if (response.headersSent) {
+              response.destroy();
+            } else {
+              console.error(error);
+              response.writeHead(500).end();
+            }
           }
         })();
       });
@@ -45,12 +57,13 @@ export class NodeServer implements Server {
           address.family === 'IPv6'
             ? new URL(`http://[${host}]:${port}`)
             : new URL(`http://${host}:${port}`);
+        origin = url.origin;
         resolve({
           host,
           port,
           url,
           stop: () =>
-            new Promise((resolve) => {
+            new Promise((resolve, reject) => {
               server.close((error) => {
                 if (error) return reject(error);
                 resolve();
@@ -62,12 +75,12 @@ export class NodeServer implements Server {
     });
   }
 
-  private toRequest(request: http.IncomingMessage, host: string): Request {
+  private toRequest(request: http.IncomingMessage, origin: string): Request {
     if (request.url === undefined || request.method === undefined) {
       throw new Error('Request URL is missing');
     }
     const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
-    return new Request(`http://${host}${request.url}`, {
+    return new Request(`${origin}${request.url}`, {
       method: request.method,
       headers: new Headers(request.headers as HeadersInit),
       body: hasBody ? (Readable.toWeb(request) as unknown as BodyInit) : null,
