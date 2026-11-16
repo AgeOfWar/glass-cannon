@@ -162,8 +162,8 @@ function pathToRegex(path: string): string {
   return (
     '^(' +
     path
-      .replace(/([.+?^=!:${}()[\]|/\\])/g, '\\$1')
-      .replace(/\\:([a-zA-Z0-9_]+)\*/g, '(?:.*)')
+      .replace(/([.+*?^=!:${}()[\]|/\\])/g, '\\$1')
+      .replace(/\\:([a-zA-Z0-9_]+)\\\*/g, '(?:.*)')
       .replace(/\\\*/g, '(?:.*)')
       .replace(/\\:([a-zA-Z0-9_]+)/g, '(?:[^/]+)') +
     '/?)$'
@@ -174,8 +174,8 @@ function pathToCapturingRegex(path: string): string {
   return (
     '^' +
     path
-      .replace(/([.+?^=!:${}()[\]|/\\])/g, '\\$1')
-      .replace(/\\:([a-zA-Z0-9_]+)\*/g, '(?<$1>.*)')
+      .replace(/([.+*?^=!:${}()[\]|/\\])/g, '\\$1')
+      .replace(/\\:([a-zA-Z0-9_]+)\\\*/g, '(?<$1>.*)')
       .replace(/\\\*/g, '(?:.*)')
       .replace(/\\:([a-zA-Z0-9_]+)/g, '(?<$1>[^/]+)') +
     '/?$'
