@@ -47,7 +47,7 @@ function updatePackageVersion(packageDir, newVersion) {
     }
   });
 
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`Updated ${pkg.name} to version ${newVersion}`);
 }
 

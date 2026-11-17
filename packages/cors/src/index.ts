@@ -24,7 +24,9 @@ export function cors(options: CorsOptions): Plugin {
     const origin = context.request.headers.get('Origin');
     if (origin && allowOrigin(origin)) {
       const headers = new Headers(response.headers);
-      headers.append('Vary', 'Origin');
+      if (!varies(headers, 'Origin')) {
+        headers.append('Vary', 'Origin');
+      }
       if (!headers.has('Access-Control-Allow-Origin')) {
         headers.set('Access-Control-Allow-Origin', origin);
       }
@@ -87,4 +89,9 @@ export function cors(options: CorsOptions): Plugin {
     addPreflightRoutes(node);
     return node;
   };
+}
+
+function varies(headers: Headers, name: string): boolean {
+  const vary = headers.get('Vary')?.toLowerCase().split(',') ?? [];
+  return vary.some((value) => value.trim() === name.toLowerCase());
 }

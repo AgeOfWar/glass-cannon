@@ -240,3 +240,12 @@ const api = routes()
 
 const router = Router.from(api);
 ```
+
+## Development
+
+```bash
+bun install
+bun run build # build all packages (they resolve each other through dist)
+bun run lint
+bun run test # build, then run the tests with bun test
+```
