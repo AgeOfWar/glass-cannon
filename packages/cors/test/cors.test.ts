@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Router, routes } from '@glass-cannon/router';
+import { middleware } from '@glass-cannon/router/middleware';
 import { cors, type CorsOptions } from '../src';
 
 const allowed = 'https://www.example.com';
@@ -71,6 +72,49 @@ describe('cors', () => {
     expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
     expect(response.headers.get('Access-Control-Max-Age')).toBe('600');
     expect(response.headers.get('Vary')).toBe('Origin');
+  });
+
+  test('never duplicates Vary values set by other middleware', async () => {
+    const varyMiddleware = middleware(async (next, context) => {
+      const response = await next(context);
+      const headers = new Headers(response.headers);
+      headers.append('Vary', 'origin, Accept-Encoding, accept-encoding');
+      return new Response(response.body, { status: response.status, headers });
+    });
+    const router = Router.from(
+      routes()
+        .apply(cors({ allowOrigin: (origin) => origin === allowed }))
+        .group(
+          { middleware: varyMiddleware },
+          routes().route({ method: 'GET', path: '/', handler: () => new Response('ok') })
+        )
+    );
+
+    const response = await router.handle(request('/', { headers: { Origin: allowed } }));
+    const preflight = await router.handle(
+      request('/', {
+        method: 'OPTIONS',
+        headers: { Origin: allowed, 'Access-Control-Request-Method': 'GET' },
+      })
+    );
+
+    expect(response.headers.get('Vary')).toBe('origin, Accept-Encoding');
+    expect(preflight.headers.get('Vary')).toBe('Origin');
+  });
+
+  test('keeps Vary: * untouched', async () => {
+    const router = Router.from(
+      routes()
+        .apply(cors({ allowOrigin: (origin) => origin === allowed }))
+        .route({
+          method: 'GET',
+          path: '/',
+          handler: () => new Response('ok', { headers: { Vary: '*' } }),
+        })
+    );
+    const response = await router.handle(request('/', { headers: { Origin: allowed } }));
+
+    expect(response.headers.get('Vary')).toBe('*');
   });
 
   test('rejects preflight requests from other origins', async () => {

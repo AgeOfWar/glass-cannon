@@ -24,9 +24,7 @@ export function cors(options: CorsOptions): Plugin {
     const origin = context.request.headers.get('Origin');
     if (origin && allowOrigin(origin)) {
       const headers = new Headers(response.headers);
-      if (!varies(headers, 'Origin')) {
-        headers.append('Vary', 'Origin');
-      }
+      addVary(headers, 'Origin');
       if (!headers.has('Access-Control-Allow-Origin')) {
         headers.set('Access-Control-Allow-Origin', origin);
       }
@@ -53,7 +51,7 @@ export function cors(options: CorsOptions): Plugin {
     }
 
     const headers = new Headers();
-    headers.append('Vary', 'Origin');
+    addVary(headers, 'Origin');
     headers.set('Access-Control-Allow-Origin', origin);
 
     if (allowCredentials) {
@@ -91,7 +89,20 @@ export function cors(options: CorsOptions): Plugin {
   };
 }
 
-function varies(headers: Headers, name: string): boolean {
-  const vary = headers.get('Vary')?.toLowerCase().split(',') ?? [];
-  return vary.some((value) => value.trim() === name.toLowerCase());
+function addVary(headers: Headers, name: string): void {
+  const values = [...(headers.get('Vary')?.split(',') ?? []), name];
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed === '' || seen.has(key)) continue;
+    if (key === '*') {
+      headers.set('Vary', '*');
+      return;
+    }
+    seen.add(key);
+    unique.push(trimmed);
+  }
+  headers.set('Vary', unique.join(', '));
 }
