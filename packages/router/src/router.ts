@@ -8,6 +8,7 @@ export interface RouterOptions {
 }
 
 interface RouteWithMetadata {
+  path: string;
   handler: RouteHandler;
   regex: string;
   score: number;
@@ -52,19 +53,26 @@ export class Router {
       method,
       params: match.params,
       request,
+      route: match.route,
     });
   };
 
   private matchMethod(
     method: string,
     path: string
-  ): { handler: RouteHandler; params: Record<string, string> } | undefined {
+  ):
+    | {
+        handler: RouteHandler;
+        params: Record<string, string>;
+        route: { method: string; path: string };
+      }
+    | undefined {
     const methodRoutes = this.routes[method];
     if (!methodRoutes) return undefined;
 
     const staticHandler = methodRoutes.static[path];
     if (staticHandler) {
-      return { handler: staticHandler, params: {} };
+      return { handler: staticHandler, params: {}, route: { method, path } };
     }
 
     const dynamic = methodRoutes.dynamic;
@@ -76,7 +84,7 @@ export class Router {
     const matchIndex = match.findLastIndex(Boolean) - 1;
     const route = dynamic.routes[matchIndex]!;
     const params = { ...route.capturingRegex.exec(path)?.groups };
-    return { handler: route.handler, params };
+    return { handler: route.handler, params, route: { method, path: route.path } };
   }
 }
 
@@ -95,15 +103,16 @@ function compileRouteNode(root: RouteNode): Record<string, CompiledMethodRoutes>
 
     for (const [rawMethod, rawHandler] of Object.entries(node.methods)) {
       const method = rawMethod.toUpperCase();
+      const path = currentPath || '/';
       const handler = middleware ? apply(middleware, rawHandler) : rawHandler;
 
       if (isDynamic) {
         dynamicByMethod[method] ??= [];
-        const metadata = computeMetadata(currentPath, handler);
+        const metadata = computeMetadata(path, handler);
         binaryInsert(dynamicByMethod[method], metadata, (item) => item.score);
       } else {
         staticByMethod[method] ??= Object.create(null);
-        staticByMethod[method]![currentPath || '/'] = handler;
+        staticByMethod[method]![path] = handler;
       }
     }
 
@@ -141,7 +150,7 @@ function computeMetadata(path: string, handler: RouteHandler): RouteWithMetadata
   const score = computeScore(path);
   const regex = pathToRegex(path);
   const capturingRegex = new RegExp(pathToCapturingRegex(path));
-  return { handler, regex, score, capturingRegex };
+  return { path, handler, regex, score, capturingRegex };
 }
 
 function computeScore(path: string): number {

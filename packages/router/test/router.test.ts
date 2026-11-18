@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { route, Router, routes, type RouteHandler } from '../src';
+import { ALL_METHODS, route, Router, routes, type RouteHandler } from '../src';
 import { middleware } from '../src/middleware';
 
 const respondWith =
@@ -138,5 +138,69 @@ describe('Router', () => {
     calls.length = 0;
     expect(await get(router, '/public')).toEqual({ name: 'public', params: {} });
     expect(calls).toEqual(['root']);
+  });
+
+  test('populates route metadata in context independently from request method and url', async () => {
+    const inspect: RouteHandler = ({ method, url, route: matchedRoute }) =>
+      Response.json({ method, pathname: url.pathname, route: matchedRoute });
+
+    const seenInMiddleware: { method: string; path: string }[] = [];
+    const captureRoute = middleware(async (next, context) => {
+      seenInMiddleware.push(context.route);
+      return await next(context);
+    });
+
+    const router = Router.from(
+      routes({ middleware: captureRoute })
+        .route({ method: 'GET', path: '/', handler: inspect })
+        .route({ method: 'get', path: '/users', handler: inspect })
+        .route({ method: 'GET', path: '/users/:id', handler: inspect })
+        .route({ method: 'GET', path: '/files/*', handler: inspect })
+        .route({ path: '/any/:slug*', handler: inspect })
+        .group(
+          { prefix: '/api' },
+          route({ method: 'POST', path: '/items/:itemId', handler: inspect })
+        )
+    );
+
+    expect(await get(router, '/')).toEqual({
+      method: 'GET',
+      pathname: '/',
+      route: { method: 'GET', path: '/' },
+    });
+    expect(await get(router, '/users/')).toEqual({
+      method: 'GET',
+      pathname: '/users/',
+      route: { method: 'GET', path: '/users' },
+    });
+    expect(await get(router, '/users/42')).toEqual({
+      method: 'GET',
+      pathname: '/users/42',
+      route: { method: 'GET', path: '/users/:id' },
+    });
+    expect(await get(router, '/files/a/b.txt')).toEqual({
+      method: 'GET',
+      pathname: '/files/a/b.txt',
+      route: { method: 'GET', path: '/files/*' },
+    });
+    expect(await get(router, '/any/docs/intro/', 'DELETE')).toEqual({
+      method: 'DELETE',
+      pathname: '/any/docs/intro/',
+      route: { method: ALL_METHODS, path: '/any/:slug*' },
+    });
+    expect(await get(router, '/api/items/99', 'POST')).toEqual({
+      method: 'POST',
+      pathname: '/api/items/99',
+      route: { method: 'POST', path: '/api/items/:itemId' },
+    });
+
+    expect(seenInMiddleware).toEqual([
+      { method: 'GET', path: '/' },
+      { method: 'GET', path: '/users' },
+      { method: 'GET', path: '/users/:id' },
+      { method: 'GET', path: '/files/*' },
+      { method: ALL_METHODS, path: '/any/:slug*' },
+      { method: 'POST', path: '/api/items/:itemId' },
+    ]);
   });
 });

@@ -5,6 +5,10 @@ export interface RouteContext {
   method: string;
   params: Record<string, string>;
   request: Request;
+  route: {
+    method: string;
+    path: string;
+  };
 }
 
 export type RouteHandler<Requires = unknown> = (
